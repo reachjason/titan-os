@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import type { Entry } from "../types";
 import { TagChip } from "./TagChip";
 import { timeLabel } from "../lib/dates";
@@ -88,13 +88,21 @@ export function EntryRow({ entry, query, activeTags, onTagClick, onEdit, onDelet
 
   return (
     <div className="row">
+      {/* Real spaces between fields so copy/paste reads: "HH:MM /tag text". */}
       <div className="row-line">
-        <span className="row-time">{timeLabel(entry.createdAt)}</span>
+        <span className="row-time">{timeLabel(entry.createdAt)}</span>{" "}
         {entry.tags.map((t) => (
-          <TagChip key={t} tag={t} active={activeTags.includes(t)} onClick={onTagClick} />
+          <Fragment key={t}>
+            <TagChip tag={t} active={activeTags.includes(t)} onClick={onTagClick} />{" "}
+          </Fragment>
         ))}
         {entry.body && <span className="row-body">{highlight(entry.body, query)}</span>}
-        {entry.edited && <span className="edited-flag" title="edited">edited</span>}
+        {entry.edited && (
+          <span className="edited-flag" title="edited">
+            {" "}
+            ✎
+          </span>
+        )}
       </div>
       <div className="row-actions">
         <button className="icon-btn" title="Edit" onClick={() => setEditing(true)}>

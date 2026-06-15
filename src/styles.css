@@ -105,44 +105,54 @@ body {
   position: relative;
 }
 .settings-trigger {
-  font-size: 17px;
-  padding: 5px 7px;
+  font-size: 16px;
+  color: var(--ink-faint);
+  padding: 6px;
+}
+.settings-trigger:hover {
+  color: var(--ink);
+  background: none;
 }
 .settings-menu {
   position: absolute;
-  top: calc(100% + 8px);
+  top: calc(100% + 10px);
   right: 0;
   background: var(--bg-raised);
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: 12px;
   box-shadow: var(--shadow);
-  padding: 6px;
-  min-width: 168px;
+  padding: 5px;
+  min-width: 156px;
   z-index: 20;
 }
 .settings-item {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 11px;
   width: 100%;
   border: none;
   background: none;
   color: var(--ink-soft);
   font-family: var(--font-body);
-  font-size: 14px;
+  font-size: 13.5px;
   text-align: left;
-  padding: 8px 10px;
-  border-radius: 7px;
+  padding: 7px 9px;
+  border-radius: 8px;
   cursor: pointer;
+  white-space: nowrap;
 }
 .settings-item span {
-  width: 16px;
+  width: 15px;
   text-align: center;
-  color: var(--clay);
+  color: var(--ink-faint);
+  font-size: 13px;
 }
 .settings-item:hover {
   background: var(--bg-sunk);
   color: var(--ink);
+}
+.settings-item:hover span {
+  color: var(--clay);
 }
 
 /* ---------- Filter bar ---------- */
@@ -221,14 +231,12 @@ body {
 .row:hover {
   background: var(--bg-raised);
 }
+/* Inline text flow (not flex) so a selection copies as one clean line. */
 .row-line {
   flex: 1;
   min-width: 0;
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 6px;
-  line-height: 1.55;
+  line-height: 1.7;
+  word-break: break-word;
 }
 .row-time {
   font-family: var(--font-mono);
@@ -236,12 +244,12 @@ body {
   color: var(--ink-faint);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-  flex-shrink: 0;
+  vertical-align: middle;
 }
 .row-body {
   font-size: 14px;
   color: var(--ink);
-  word-break: break-word;
+  vertical-align: middle;
 }
 .row-body mark {
   background: var(--mark);
@@ -251,9 +259,9 @@ body {
 }
 .edited-flag {
   font-size: 10px;
-  font-style: italic;
   color: var(--ink-faint);
-  text-transform: lowercase;
+  vertical-align: middle;
+  user-select: none; /* keep copied text to timestamp · tags · body only */
 }
 
 .row-editing {
@@ -279,6 +287,7 @@ body {
   flex-shrink: 0;
   opacity: 0;
   transition: opacity 0.12s;
+  user-select: none; /* excluded from copy/paste */
 }
 .row:hover .row-actions {
   opacity: 1;
@@ -303,6 +312,8 @@ body {
 
 /* ---------- Chips ---------- */
 .chip {
+  display: inline-block;
+  vertical-align: middle;
   font-family: var(--font-mono);
   font-size: 12px;
   font-weight: 500;
