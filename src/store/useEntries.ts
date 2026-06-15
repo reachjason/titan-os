@@ -48,8 +48,22 @@ export function useEntries() {
       createdAt: now,
       updatedAt: now,
       edited: false,
+      done: false,
+      pinned: false,
     };
     setEntries((prev) => [...prev, entry]);
+  }, []);
+
+  const toggleDone = useCallback((id: string) => {
+    setEntries((prev) =>
+      prev.map((e) => (e.id === id ? { ...e, done: !e.done } : e))
+    );
+  }, []);
+
+  const togglePin = useCallback((id: string) => {
+    setEntries((prev) =>
+      prev.map((e) => (e.id === id ? { ...e, pinned: !e.pinned } : e))
+    );
   }, []);
 
   const update = useCallback((id: string, raw: string) => {
@@ -72,5 +86,5 @@ export function useEntries() {
     setEntries(next);
   }, []);
 
-  return { entries, add, update, remove, importEntries };
+  return { entries, add, update, remove, toggleDone, togglePin, importEntries };
 }

@@ -8,9 +8,14 @@ interface Props {
   entry: Entry;
   query: string;
   activeTags: string[];
+  /** This entry carries a task tag → show a checkbox. */
+  checkable: boolean;
+  showTime: boolean;
   onTagClick: (tag: string) => void;
   onEdit: (id: string, raw: string) => void;
   onDelete: (id: string) => void;
+  onToggleDone: (id: string) => void;
+  onTogglePin: (id: string) => void;
 }
 
 /** Split text on a case-insensitive query and wrap matches in <mark>. */
@@ -30,7 +35,18 @@ function highlight(text: string, query: string) {
   return parts;
 }
 
-export function EntryRow({ entry, query, activeTags, onTagClick, onEdit, onDelete }: Props) {
+export function EntryRow({
+  entry,
+  query,
+  activeTags,
+  checkable,
+  showTime,
+  onTagClick,
+  onEdit,
+  onDelete,
+  onToggleDone,
+  onTogglePin,
+}: Props) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(entry.raw);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -49,12 +65,10 @@ export function EntryRow({ entry, query, activeTags, onTagClick, onEdit, onDelet
     if (draft.trim() && draft.trim() !== entry.raw) onEdit(entry.id, draft);
     setEditing(false);
   };
-
   const cancel = () => {
     setDraft(entry.raw);
     setEditing(false);
   };
-
   const handleDelete = () => {
     if (!config.ui.confirmOnDelete || confirm("Delete this entry?")) onDelete(entry.id);
   };
@@ -86,11 +100,25 @@ export function EntryRow({ entry, query, activeTags, onTagClick, onEdit, onDelet
     );
   }
 
+  const done = !!entry.done;
+
   return (
-    <div className="row">
-      {/* Real spaces between fields so copy/paste reads: "HH:MM /tag text". */}
+    <div className={`row${done ? " row-done" : ""}${entry.pinned ? " row-pinned" : ""}`}>
+      {checkable ? (
+        <button
+          className={`check${done ? " check-on" : ""}`}
+          onClick={() => onToggleDone(entry.id)}
+          title={done ? "Mark not done" : "Mark done"}
+          aria-pressed={done}
+          aria-label={done ? "Completed" : "Mark done"}
+        >
+          {done ? "✓" : ""}
+        </button>
+      ) : (
+        <span className="bullet" aria-hidden="true" />
+      )}
+
       <div className="row-line">
-        <span className="row-time">{timeLabel(entry.createdAt)}</span>{" "}
         {entry.tags.map((t) => (
           <Fragment key={t}>
             <TagChip tag={t} active={activeTags.includes(t)} onClick={onTagClick} />{" "}
@@ -104,13 +132,24 @@ export function EntryRow({ entry, query, activeTags, onTagClick, onEdit, onDelet
           </span>
         )}
       </div>
-      <div className="row-actions">
-        <button className="icon-btn" title="Edit" onClick={() => setEditing(true)}>
-          ✎
-        </button>
-        <button className="icon-btn icon-danger" title="Delete" onClick={handleDelete}>
-          ✕
-        </button>
+
+      <div className="row-trail">
+        <div className="row-actions">
+          <button
+            className={`icon-btn${entry.pinned ? " icon-pinned" : ""}`}
+            title={entry.pinned ? "Unpin" : "Pin to top"}
+            onClick={() => onTogglePin(entry.id)}
+          >
+            {entry.pinned ? "★" : "☆"}
+          </button>
+          <button className="icon-btn" title="Edit" onClick={() => setEditing(true)}>
+            ✎
+          </button>
+          <button className="icon-btn icon-danger" title="Delete" onClick={handleDelete}>
+            ✕
+          </button>
+        </div>
+        {showTime && <span className="row-time">{timeLabel(entry.createdAt)}</span>}
       </div>
     </div>
   );

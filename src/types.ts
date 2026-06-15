@@ -9,6 +9,18 @@ export interface Entry {
   createdAt: number;
   updatedAt: number;
   edited: boolean;
+  /** Completed — only meaningful for task entries (fades + strikes through). */
+  done?: boolean;
+  /** Pinned to the top focus section. */
+  pinned?: boolean;
+}
+
+/** User preferences, editable in Settings and persisted. */
+export interface Prefs {
+  /** Show the faint per-row timestamp. */
+  showTimestamps: boolean;
+  /** Tags that turn an entry into a checkable task, e.g. ["do","todo"]. */
+  taskTags: string[];
 }
 
 export type Theme = "light" | "dark";

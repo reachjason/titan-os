@@ -80,12 +80,22 @@ export const config = {
     clearFilters: "Escape",
   },
 
+  /** Default preferences (editable in Settings, then persisted). */
+  prefs: {
+    /** Show the faint per-row timestamp. */
+    showTimestamps: true,
+    /** Tags that make an entry a checkable task. */
+    taskTags: ["do", "todo"],
+  },
+
   /** localStorage keys. Change these to keep separate inboxes. */
   storage: {
     entriesKey: "titan-os.entries.v1",
     themeKey: "titan-os.theme",
     /** Remembers sort mode + match mode across reloads. */
     viewKey: "titan-os.view.v1",
+    /** Remembers preferences (timestamps, task tags). */
+    prefsKey: "titan-os.prefs.v1",
   },
 
   /**

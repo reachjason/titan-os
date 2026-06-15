@@ -15,14 +15,16 @@ npm run build    # typecheck + production build into dist/
 
 ## Use
 
-- **Log:** type and hit `Enter`. Tags can sit anywhere: `call vendor /urgent re /invoice`.
+- **Capture:** type and hit `Enter`. Tags can sit anywhere: `call vendor /urgent re /invoice`.
+- **Tasks vs notes:** entries with a **task tag** (default `/do`, `/todo`) get a checkbox — check them off to fade + strike them. Other lines are plain notes. Edit the task-tag set in Settings.
+- **Pin to top:** hover a row and click ★ to pin it into the **Pinned** focus section at the top.
 - **History:** `↑` / `↓` walk through previous entries like a terminal. `Esc` clears the line.
 - **Filter:** click any tag chip (click more to combine; toggle `match any` / `match all`). `Esc` clears.
 - **Search:** top bar — matches body text and tags (`/todo` or `todo` both work).
 - **Sort / group:** the icon control toggles newest-bottom (`↓`), newest-top (`↑`), group-by-tag (`#`).
   In tag mode an entry appears under each of its tags. Sort + match persist across reloads.
 - **Edit / delete:** hover a row for ✎ / ✕.
-- **Settings (⚙):** dark mode, export/import JSON, keyboard shortcuts.
+- **Settings (⚙):** dark mode, show/hide timestamps, task tags, export/import JSON, keyboard shortcuts.
 
 ### Keyboard shortcuts (press `?` for the in-app list)
 

@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useEntries } from "./store/useEntries";
 import { useTheme } from "./store/useTheme";
+import { usePrefs } from "./store/usePrefs";
 import { Feed } from "./components/Feed";
 import { TerminalBar, type TerminalBarHandle } from "./components/TerminalBar";
 import { TagChip } from "./components/TagChip";
-import { Settings } from "./components/Settings";
+import { SettingsModal } from "./components/SettingsModal";
 import { HelpModal } from "./components/HelpModal";
 import { config } from "./config";
 import type { Entry, FilterState, SortMode } from "./types";
@@ -27,8 +28,10 @@ function loadView(): { sort: SortMode; match: "any" | "all" } | null {
 }
 
 export default function App() {
-  const { entries, add, update, remove, importEntries } = useEntries();
+  const { entries, add, update, remove, toggleDone, togglePin, importEntries } =
+    useEntries();
   const { theme, toggle } = useTheme();
+  const { prefs, toggleTimestamps, addTaskTag, removeTaskTag } = usePrefs();
   const [filter, setFilter] = useState<FilterState>(() => ({
     tags: [],
     match: loadView()?.match ?? "any",
@@ -36,6 +39,7 @@ export default function App() {
   }));
   const [sort, setSort] = useState<SortMode>(() => loadView()?.sort ?? "asc");
   const [helpOpen, setHelpOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const barRef = useRef<TerminalBarHandle>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -182,13 +186,14 @@ export default function App() {
           )}
         </div>
 
-        <Settings
-          theme={theme}
-          onToggleTheme={toggle}
-          onExport={exportJson}
-          onImport={() => fileRef.current?.click()}
-          onHelp={() => setHelpOpen(true)}
-        />
+        <button
+          className="icon-btn settings-trigger"
+          title="Settings"
+          aria-label="Settings"
+          onClick={() => setSettingsOpen(true)}
+        >
+          ⚙
+        </button>
         <input
           ref={fileRef}
           type="file"
@@ -230,9 +235,13 @@ export default function App() {
           query={filter.query}
           activeTags={filter.tags}
           filtering={filtering}
+          taskTags={prefs.taskTags}
+          showTime={prefs.showTimestamps}
           onTagClick={toggleTag}
           onEdit={update}
           onDelete={remove}
+          onToggleDone={toggleDone}
+          onTogglePin={togglePin}
         />
       </main>
 
@@ -240,6 +249,24 @@ export default function App() {
         <TerminalBar ref={barRef} onSubmit={add} knownTags={knownTags} history={history} />
       </footer>
 
+      {settingsOpen && (
+        <SettingsModal
+          theme={theme}
+          onToggleTheme={toggle}
+          prefs={prefs}
+          onToggleTimestamps={toggleTimestamps}
+          onAddTaskTag={addTaskTag}
+          onRemoveTaskTag={removeTaskTag}
+          knownTags={knownTags}
+          onExport={exportJson}
+          onImport={() => fileRef.current?.click()}
+          onShowHelp={() => {
+            setSettingsOpen(false);
+            setHelpOpen(true);
+          }}
+          onClose={() => setSettingsOpen(false)}
+        />
+      )}
       {helpOpen && <HelpModal onClose={() => setHelpOpen(false)} />}
     </div>
   );
