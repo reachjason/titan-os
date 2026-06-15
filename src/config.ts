@@ -75,6 +75,8 @@ export const config = {
     focusSearch: "k",
     /** Cycle sort/group mode: newest-bottom → newest-top → by-tag. */
     cycleSort: "s",
+    /** Toggle focus mode (pinned tasks only). */
+    focusMode: "f",
     /** Open the keyboard-shortcut help modal. */
     help: "?",
     /** Clear active tag + search filters / close modals. */

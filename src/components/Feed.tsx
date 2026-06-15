@@ -13,6 +13,7 @@ interface Props {
   query: string;
   activeTags: string[];
   filtering: boolean;
+  focus: boolean;
   taskTags: string[];
   showTime: boolean;
   onTagClick: (tag: string) => void;
@@ -57,6 +58,7 @@ export function Feed(props: Props) {
     query,
     activeTags,
     filtering,
+    focus,
     taskTags,
     showTime,
     onTagClick,
@@ -96,6 +98,21 @@ export function Feed(props: Props) {
       onTogglePin={onTogglePin}
     />
   );
+
+  // Focus mode: only pinned tasks, nothing else.
+  if (focus) {
+    return (
+      <div className="feed feed-focus">
+        {pinned.length > 0 ? (
+          pinned.map((e) => <Fragment key={`pin:${e.id}`}>{renderRow(e)}</Fragment>)
+        ) : (
+          <div className="feed-empty">
+            <p>Nothing pinned. Pin a task with ★, then press F to focus on it.</p>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   if (entries.length === 0) {
     return (

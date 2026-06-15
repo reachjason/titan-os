@@ -67,6 +67,21 @@ body {
   letter-spacing: 0.12em;
 }
 
+.focus-btn {
+  margin-left: auto;
+  font-size: 16px;
+  color: var(--ink-faint);
+  padding: 5px 7px;
+}
+.focus-btn:hover {
+  color: var(--ink);
+}
+.focus-on,
+.focus-on:hover {
+  color: #fff;
+  background: var(--clay);
+}
+
 .sort-group {
   margin-left: auto;
   display: flex;
@@ -263,6 +278,10 @@ body {
   font-size: 15px;
   text-align: center;
   padding: 60px 20px;
+}
+/* Focus mode: pinned only, calmer top spacing */
+.feed-focus {
+  padding-top: 28px;
 }
 
 .date-divider {

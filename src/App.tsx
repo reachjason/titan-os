@@ -40,6 +40,7 @@ export default function App() {
   const [sort, setSort] = useState<SortMode>(() => loadView()?.sort ?? "asc");
   const [helpOpen, setHelpOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [focus, setFocus] = useState(false);
   const barRef = useRef<TerminalBarHandle>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -106,19 +107,23 @@ export default function App() {
       if (e.key === config.shortcuts.help) {
         e.preventDefault();
         setHelpOpen(true);
+      } else if (e.key.toLowerCase() === config.shortcuts.focusMode) {
+        e.preventDefault();
+        setFocus((f) => !f);
       } else if (e.key === config.shortcuts.focusBar) {
         e.preventDefault();
         barRef.current?.focus();
       } else if (e.key.toLowerCase() === config.shortcuts.cycleSort) {
         e.preventDefault();
         cycleSort();
-      } else if (e.key === config.shortcuts.clearFilters && filtering) {
-        clearFilters();
+      } else if (e.key === config.shortcuts.clearFilters) {
+        if (focus) setFocus(false);
+        else if (filtering) clearFilters();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [filtering]);
+  }, [filtering, focus]);
 
   const exportJson = () => {
     const blob = new Blob([JSON.stringify(entries, null, 2)], {
@@ -152,39 +157,52 @@ export default function App() {
           <span className="brand-mark">{config.brand.mark}</span>
         </div>
 
-        <div className="sort-group" role="group" aria-label="Sort and group">
-          {SORTS.map((s) => (
-            <button
-              key={s.mode}
-              className={`sort-btn${sort === s.mode ? " sort-active" : ""}`}
-              onClick={() => setSort(s.mode)}
-              title={`${s.label}  (S to cycle)`}
-              aria-label={s.label}
-            >
-              {s.icon}
-            </button>
-          ))}
-        </div>
+        <button
+          className={`icon-btn focus-btn${focus ? " focus-on" : ""}`}
+          onClick={() => setFocus((f) => !f)}
+          title="Focus mode — pinned only (F)"
+          aria-pressed={focus}
+        >
+          ◎
+        </button>
 
-        <div className="search-wrap">
-          <input
-            ref={searchRef}
-            className="search-input"
-            placeholder={config.ui.searchPlaceholder}
-            title="Search (⌘K)"
-            value={filter.query}
-            onChange={(e) => setFilter((f) => ({ ...f, query: e.target.value }))}
-          />
-          {filter.query && (
-            <button
-              className="search-clear"
-              onClick={() => setFilter((f) => ({ ...f, query: "" }))}
-              title="Clear search"
-            >
-              ✕
-            </button>
-          )}
-        </div>
+        {!focus && (
+          <>
+            <div className="sort-group" role="group" aria-label="Sort and group">
+              {SORTS.map((s) => (
+                <button
+                  key={s.mode}
+                  className={`sort-btn${sort === s.mode ? " sort-active" : ""}`}
+                  onClick={() => setSort(s.mode)}
+                  title={`${s.label}  (S to cycle)`}
+                  aria-label={s.label}
+                >
+                  {s.icon}
+                </button>
+              ))}
+            </div>
+
+            <div className="search-wrap">
+              <input
+                ref={searchRef}
+                className="search-input"
+                placeholder={config.ui.searchPlaceholder}
+                title="Search (⌘K)"
+                value={filter.query}
+                onChange={(e) => setFilter((f) => ({ ...f, query: e.target.value }))}
+              />
+              {filter.query && (
+                <button
+                  className="search-clear"
+                  onClick={() => setFilter((f) => ({ ...f, query: "" }))}
+                  title="Clear search"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          </>
+        )}
 
         <button
           className="icon-btn settings-trigger"
@@ -230,11 +248,12 @@ export default function App() {
 
       <main className="feed-area">
         <Feed
-          entries={filtered}
+          entries={focus ? entries : filtered}
           sort={sort}
           query={filter.query}
           activeTags={filter.tags}
           filtering={filtering}
+          focus={focus}
           taskTags={prefs.taskTags}
           showTime={prefs.showTimestamps}
           onTagClick={toggleTag}

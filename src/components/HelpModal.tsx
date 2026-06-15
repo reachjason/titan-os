@@ -8,6 +8,7 @@ const SHORTCUTS: { keys: string[]; label: string }[] = [
   { keys: ["⌘", "K"], label: "Search" },
   { keys: ["/"], label: "Focus the log bar" },
   { keys: ["S"], label: "Cycle sort / group" },
+  { keys: ["F"], label: "Focus mode — pinned only" },
   { keys: ["?"], label: "Show this help" },
   { keys: ["Esc"], label: "Clear filters · cancel · close" },
   { keys: ["Enter"], label: "Log the entry" },
