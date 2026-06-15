@@ -8,18 +8,20 @@ import { TagChip } from "./components/TagChip";
 import { SettingsModal } from "./components/SettingsModal";
 import { HelpModal } from "./components/HelpModal";
 import { PinnedNotch } from "./components/PinnedNotch";
+import { Board } from "./components/Board";
 import { config } from "./config";
-import type { Entry, FilterState, SortMode } from "./types";
+import type { Entry, FilterState, SortMode, ViewMode } from "./types";
 
 /** Sort/group modes shown as the segmented icon control. */
 const SORTS: { mode: SortMode; icon: string; label: string }[] = [
   { mode: "asc", icon: "↓", label: "Newest at bottom" },
   { mode: "desc", icon: "↑", label: "Newest at top" },
   { mode: "tag", icon: "#", label: "Group by tag" },
+  { mode: "manual", icon: "↕", label: "Manual order (drag to reorder)" },
 ];
 
-/** Restore the saved view (sort + match) so the last screen persists. */
-function loadView(): { sort: SortMode; match: "any" | "all" } | null {
+/** Restore the saved view (sort + match + list/board) so the last screen persists. */
+function loadView(): { sort: SortMode; match: "any" | "all"; view: ViewMode } | null {
   try {
     const raw = localStorage.getItem(config.storage.viewKey);
     return raw ? JSON.parse(raw) : null;
@@ -29,7 +31,7 @@ function loadView(): { sort: SortMode; match: "any" | "all" } | null {
 }
 
 export default function App() {
-  const { entries, add, update, remove, toggleDone, togglePin, importEntries } =
+  const { entries, add, update, remove, toggleDone, togglePin, moveCard, setOrder, importEntries } =
     useEntries();
   const { theme, toggle } = useTheme();
   const { prefs, toggleTimestamps, addTaskTag, removeTaskTag } = usePrefs();
@@ -39,6 +41,7 @@ export default function App() {
     query: "",
   }));
   const [sort, setSort] = useState<SortMode>(() => loadView()?.sort ?? "asc");
+  const [view, setView] = useState<ViewMode>(() => loadView()?.view ?? "list");
   const [helpOpen, setHelpOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [focus, setFocus] = useState(false);
@@ -49,13 +52,13 @@ export default function App() {
   const cycleSort = () =>
     setSort((s) => SORTS[(SORTS.findIndex((x) => x.mode === s) + 1) % SORTS.length].mode);
 
-  // Persist the view (sort + match) across reloads.
+  // Persist the view (sort + match + list/board) across reloads.
   useEffect(() => {
     localStorage.setItem(
       config.storage.viewKey,
-      JSON.stringify({ sort, match: filter.match })
+      JSON.stringify({ sort, match: filter.match, view })
     );
-  }, [sort, filter.match]);
+  }, [sort, filter.match, view]);
 
   const knownTags = useMemo(() => {
     const set = new Set<string>();
@@ -109,13 +112,13 @@ export default function App() {
       if (e.key === config.shortcuts.help) {
         e.preventDefault();
         setHelpOpen(true);
-      } else if (e.key.toLowerCase() === config.shortcuts.focusMode) {
+      } else if (e.key.toLowerCase() === config.shortcuts.focusMode && view === "list") {
         e.preventDefault();
         setFocus((f) => !f);
       } else if (e.key === config.shortcuts.focusBar) {
         e.preventDefault();
         barRef.current?.focus();
-      } else if (e.key.toLowerCase() === config.shortcuts.cycleSort) {
+      } else if (e.key.toLowerCase() === config.shortcuts.cycleSort && view === "list") {
         e.preventDefault();
         cycleSort();
       } else if (e.key === config.shortcuts.clearFilters) {
@@ -125,7 +128,7 @@ export default function App() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [filtering, focus]);
+  }, [filtering, focus, view]);
 
   const exportJson = () => {
     const blob = new Blob([JSON.stringify(entries, null, 2)], {
@@ -159,7 +162,24 @@ export default function App() {
           <span className="brand-mark">{config.brand.mark}</span>
         </div>
 
-        {!focus && (
+        <div className="view-toggle" role="group" aria-label="View">
+          <button
+            className={`view-btn${view === "list" ? " view-active" : ""}`}
+            onClick={() => setView("list")}
+            title="List view"
+          >
+            ☰
+          </button>
+          <button
+            className={`view-btn${view === "board" ? " view-active" : ""}`}
+            onClick={() => setView("board")}
+            title="Board view"
+          >
+            ▦
+          </button>
+        </div>
+
+        {view === "list" && !focus && (
           <>
             <div className="sort-group" role="group" aria-label="Sort and group">
               {SORTS.map((s) => (
@@ -200,14 +220,16 @@ export default function App() {
           </>
         )}
 
-        <button
-          className={`icon-btn focus-btn${focus ? " focus-on" : ""}`}
-          onClick={() => setFocus((f) => !f)}
-          title="Focus mode — pinned only (F)"
-          aria-pressed={focus}
-        >
-          {focus ? "◉" : "◎"}
-        </button>
+        {view === "list" && (
+          <button
+            className={`icon-btn focus-btn${focus ? " focus-on" : ""}`}
+            onClick={() => setFocus((f) => !f)}
+            title="Focus mode — pinned only (F)"
+            aria-pressed={focus}
+          >
+            {focus ? "◉" : "◎"}
+          </button>
+        )}
 
         <button
           className="icon-btn settings-trigger"
@@ -251,38 +273,54 @@ export default function App() {
         </div>
       )}
 
-      {!focus && (
-        <PinnedNotch
-          entries={pinned}
-          query={filter.query}
-          activeTags={filter.tags}
-          taskTags={prefs.taskTags}
-          showTime={prefs.showTimestamps}
-          onTagClick={toggleTag}
-          onEdit={update}
-          onDelete={remove}
-          onToggleDone={(id) => toggleDone(id, prefs.taskTags)}
-          onTogglePin={togglePin}
-        />
-      )}
+      {view === "board" ? (
+        <main className="feed-area">
+          <Board
+            entries={filtered}
+            taskTags={prefs.taskTags}
+            onMove={(id, status, order) => moveCard(id, status, order, prefs.taskTags)}
+            onTogglePin={togglePin}
+            onDelete={remove}
+            onTagClick={toggleTag}
+          />
+        </main>
+      ) : (
+        <>
+          {!focus && (
+            <PinnedNotch
+              entries={pinned}
+              query={filter.query}
+              activeTags={filter.tags}
+              taskTags={prefs.taskTags}
+              showTime={prefs.showTimestamps}
+              onTagClick={toggleTag}
+              onEdit={update}
+              onDelete={remove}
+              onToggleDone={(id) => toggleDone(id, prefs.taskTags)}
+              onTogglePin={togglePin}
+            />
+          )}
 
-      <main className="feed-area">
-        <Feed
-          entries={focus ? entries : filtered}
-          sort={sort}
-          query={filter.query}
-          activeTags={filter.tags}
-          filtering={filtering}
-          focus={focus}
-          taskTags={prefs.taskTags}
-          showTime={prefs.showTimestamps}
-          onTagClick={toggleTag}
-          onEdit={update}
-          onDelete={remove}
-          onToggleDone={(id) => toggleDone(id, prefs.taskTags)}
-          onTogglePin={togglePin}
-        />
-      </main>
+          <main className="feed-area">
+            <Feed
+              entries={focus ? entries : filtered}
+              sort={sort}
+              query={filter.query}
+              activeTags={filter.tags}
+              filtering={filtering}
+              focus={focus}
+              taskTags={prefs.taskTags}
+              showTime={prefs.showTimestamps}
+              onTagClick={toggleTag}
+              onEdit={update}
+              onDelete={remove}
+              onToggleDone={(id) => toggleDone(id, prefs.taskTags)}
+              onTogglePin={togglePin}
+              onSetOrder={setOrder}
+            />
+          </main>
+        </>
+      )}
 
       <footer className="bar-area">
         <TerminalBar ref={barRef} onSubmit={add} knownTags={knownTags} history={history} />

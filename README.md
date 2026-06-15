@@ -21,8 +21,9 @@ npm run build    # typecheck + production build into dist/
 - **History:** `↑` / `↓` walk through previous entries like a terminal. `Esc` clears the line.
 - **Filter:** click any tag chip (click more to combine; toggle `match any` / `match all`). `Esc` clears.
 - **Search:** top bar — matches body text and tags (`/todo` or `todo` both work).
-- **Sort / group:** the icon control toggles newest-bottom (`↓`), newest-top (`↑`), group-by-tag (`#`).
-  In tag mode an entry appears under each of its tags. Sort + match persist across reloads.
+- **List ↔ Board:** the `☰`/`▦` toggle switches between the list/inbox and a kanban board.
+- **Board:** task-tagged entries are cards in **To Do · In Progress · Done**. Drag a card between columns to change status (dropping in Done checks it off / retags `/done`); drag within a column to reorder.
+- **Sort / group:** the icon control toggles newest-bottom (`↓`), newest-top (`↑`), group-by-tag (`#`), manual (`↕`, drag the `⋮⋮` handle to reorder). In tag mode an entry appears under each of its tags. Sort + match + view persist across reloads.
 - **Edit / delete:** hover a row for ✎ / ✕.
 - **Settings (⚙):** dark mode, show/hide timestamps, task tags, export/import JSON, keyboard shortcuts.
 

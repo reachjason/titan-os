@@ -1,9 +1,33 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Entry } from "../types";
+import type { Entry, TaskStatus } from "../types";
 import { parseEntry } from "../lib/parse";
 import { config } from "../config";
 
 const STORAGE_KEY = config.storage.entriesKey;
+
+/** Rewrite /tags matching `fromTags` to `/to` in a raw string. */
+function retagRaw(raw: string, fromTags: string[], to: string): string {
+  return raw.replace(/(^|\s)\/([a-z0-9][a-z0-9_-]*)/gi, (m, sp, tag) =>
+    fromTags.includes(tag.toLowerCase()) ? `${sp}/${to}` : m
+  );
+}
+
+/** Move an entry to a status, syncing its done flag + /do↔/done tag. */
+function applyStatus(e: Entry, status: TaskStatus, taskTags: string[]): Entry {
+  const wasDone = !!e.done || e.tags.includes("done");
+  let { tags, raw } = e;
+  let done = !!e.done;
+  if (status === "done" && !wasDone) {
+    tags = Array.from(new Set(e.tags.map((t) => (taskTags.includes(t) ? "done" : t))));
+    raw = retagRaw(e.raw, taskTags, "done");
+    done = true;
+  } else if (status !== "done" && wasDone) {
+    tags = Array.from(new Set(e.tags.map((t) => (t === "done" ? "do" : t))));
+    raw = retagRaw(e.raw, ["done"], "do");
+    done = false;
+  }
+  return { ...e, status, tags, raw, done };
+}
 
 function load(): Entry[] {
   try {
@@ -50,27 +74,37 @@ export function useEntries() {
       edited: false,
       done: false,
       pinned: false,
+      status: "todo",
+      order: now,
     };
     setEntries((prev) => [...prev, entry]);
   }, []);
 
-  // Completing a task rewrites its task tag (e.g. /do) to /done; unchecking reverts to /do.
+  // Checkbox: toggle between done and todo (syncs /do↔/done).
   const toggleDone = useCallback((id: string, taskTags: string[]) => {
     setEntries((prev) =>
       prev.map((e) => {
         if (e.id !== id) return e;
-        const from = e.done ? ["done"] : taskTags;
-        const to = e.done ? "do" : "done";
-        const tags = Array.from(
-          new Set(e.tags.map((t) => (from.includes(t) ? to : t)))
-        );
-        const raw = e.raw.replace(
-          /(^|\s)\/([a-z0-9][a-z0-9_-]*)/gi,
-          (m, sp, tag) => (from.includes(tag.toLowerCase()) ? `${sp}/${to}` : m)
-        );
-        return { ...e, done: !e.done, tags, raw };
+        const next: TaskStatus =
+          e.done || e.tags.includes("done") ? "todo" : "done";
+        return applyStatus(e, next, taskTags);
       })
     );
+  }, []);
+
+  // Board drag: set a card's column + manual position at once.
+  const moveCard = useCallback(
+    (id: string, status: TaskStatus, order: number, taskTags: string[]) => {
+      setEntries((prev) =>
+        prev.map((e) => (e.id === id ? { ...applyStatus(e, status, taskTags), order } : e))
+      );
+    },
+    []
+  );
+
+  // List manual reorder: set a row's position without changing status.
+  const setOrder = useCallback((id: string, order: number) => {
+    setEntries((prev) => prev.map((e) => (e.id === id ? { ...e, order } : e)));
   }, []);
 
   const togglePin = useCallback((id: string) => {
@@ -99,5 +133,15 @@ export function useEntries() {
     setEntries(next);
   }, []);
 
-  return { entries, add, update, remove, toggleDone, togglePin, importEntries };
+  return {
+    entries,
+    add,
+    update,
+    remove,
+    toggleDone,
+    togglePin,
+    moveCard,
+    setOrder,
+    importEntries,
+  };
 }

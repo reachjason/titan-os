@@ -1,9 +1,10 @@
-import { Fragment, useEffect, useMemo, useRef } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import type { Entry, SortMode } from "../types";
 import { EntryRow } from "./EntryRow";
 import { DateDivider } from "./DateDivider";
 import { TagChip } from "./TagChip";
 import { dayKey, dividerLabel } from "../lib/dates";
+import { orderOf } from "../lib/tasks";
 import { isTask } from "../store/usePrefs";
 import { config } from "../config";
 
@@ -21,6 +22,7 @@ interface Props {
   onDelete: (id: string) => void;
   onToggleDone: (id: string) => void;
   onTogglePin: (id: string) => void;
+  onSetOrder: (id: string, order: number) => void;
 }
 
 const UNTAGGED = "untagged";
@@ -45,6 +47,11 @@ function buildItems(entries: Entry[], sort: SortMode): Item[] {
     });
     return pairs.map((p) => ({ key: `${p.tag}:${p.entry.id}`, entry: p.entry, group: p.tag }));
   }
+  if (sort === "manual") {
+    return [...entries]
+      .sort((a, b) => orderOf(a) - orderOf(b))
+      .map((e) => ({ key: e.id, entry: e, group: "" }));
+  }
   const sorted = [...entries].sort((a, b) =>
     sort === "desc" ? b.createdAt - a.createdAt : a.createdAt - b.createdAt
   );
@@ -66,10 +73,13 @@ export function Feed(props: Props) {
     onDelete,
     onToggleDone,
     onTogglePin,
+    onSetOrder,
   } = props;
 
   const bottomRef = useRef<HTMLDivElement>(null);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
   const byTag = sort === "tag";
+  const manual = sort === "manual";
 
   const pinned = useMemo(
     () => entries.filter((e) => e.pinned).sort((a, b) => a.createdAt - b.createdAt),
@@ -83,8 +93,6 @@ export function Feed(props: Props) {
     if (autoScroll) bottomRef.current?.scrollIntoView({ block: "end" });
   }, [items.length, autoScroll]);
 
-  // Shared row renderer so pinned + feed look identical. `minimal` strips
-  // tags + time for the focus view.
   const renderRow = (entry: Entry, minimal = false) => (
     <EntryRow
       entry={entry}
@@ -101,7 +109,6 @@ export function Feed(props: Props) {
     />
   );
 
-  // Focus mode: only pinned tasks, nothing else.
   if (focus) {
     return (
       <div className="feed feed-focus">
@@ -124,6 +131,53 @@ export function Feed(props: Props) {
             ? "Nothing matches that filter."
             : "Nothing here yet. Capture a task below — try “/do ship the deck”."}
         </p>
+      </div>
+    );
+  }
+
+  // Manual: drag rows by their handle to reorder.
+  if (manual) {
+    const list = items.map((it) => it.entry);
+    const orderBefore = (target: Entry) => {
+      const idx = list.findIndex((e) => e.id === target.id);
+      const prev = list[idx - 1];
+      return prev ? (orderOf(prev) + orderOf(target)) / 2 : orderOf(target) - 1;
+    };
+    const orderEnd = () => {
+      const last = list[list.length - 1];
+      return last ? orderOf(last) + 1 : Date.now();
+    };
+    const dropAt = (order: number) => {
+      if (draggingId) onSetOrder(draggingId, order);
+      setDraggingId(null);
+    };
+    return (
+      <div className="feed">
+        {items.map((it) => (
+          <div
+            key={it.key}
+            className={`drag-row${draggingId === it.entry.id ? " dragging" : ""}`}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={() => dropAt(orderBefore(it.entry))}
+          >
+            <span
+              className="drag-handle"
+              draggable
+              title="Drag to reorder"
+              onDragStart={() => setDraggingId(it.entry.id)}
+              onDragEnd={() => setDraggingId(null)}
+            >
+              ⋮⋮
+            </span>
+            {renderRow(it.entry)}
+          </div>
+        ))}
+        <div
+          className="drag-end"
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={() => dropAt(orderEnd())}
+        />
+        <div ref={bottomRef} />
       </div>
     );
   }

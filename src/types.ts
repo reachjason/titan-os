@@ -13,7 +13,15 @@ export interface Entry {
   done?: boolean;
   /** Pinned to the top focus section. */
   pinned?: boolean;
+  /** Kanban column for task entries. */
+  status?: TaskStatus;
+  /** Manual sort position (board column + list "manual" sort). */
+  order?: number;
 }
+
+export type TaskStatus = "todo" | "doing" | "done";
+
+export type ViewMode = "list" | "board";
 
 /** User preferences, editable in Settings and persisted. */
 export interface Prefs {
@@ -25,8 +33,8 @@ export interface Prefs {
 
 export type Theme = "light" | "dark";
 
-/** Feed ordering: oldest→newest (chat), newest→oldest, or grouped by tag. */
-export type SortMode = "asc" | "desc" | "tag";
+/** Feed ordering: oldest→newest (chat), newest→oldest, grouped by tag, or manual. */
+export type SortMode = "asc" | "desc" | "tag" | "manual";
 
 export interface FilterState {
   /** Active tag filters. Empty = no tag filter. */
