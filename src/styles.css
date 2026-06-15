@@ -486,6 +486,41 @@ body {
   color: var(--clay-deep);
 }
 
+/* Inline delete confirmation (replaces the native popup) */
+.row-confirm {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  user-select: none;
+}
+.confirm-label {
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+.confirm-yes,
+.confirm-no {
+  border: 1px solid var(--line);
+  background: var(--bg);
+  font-family: var(--font-body);
+  font-size: 12px;
+  padding: 3px 9px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.confirm-yes {
+  background: var(--clay-deep);
+  border-color: var(--clay-deep);
+  color: #fff;
+}
+.confirm-yes:hover {
+  filter: brightness(1.05);
+}
+.confirm-no:hover {
+  border-color: var(--ink-faint);
+  color: var(--ink);
+}
+
 /* ---------- Chips ---------- */
 .chip {
   display: inline-block;

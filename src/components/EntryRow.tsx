@@ -48,6 +48,7 @@ export function EntryRow({
   onTogglePin,
 }: Props) {
   const [editing, setEditing] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const [draft, setDraft] = useState(entry.raw);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -70,7 +71,8 @@ export function EntryRow({
     setEditing(false);
   };
   const handleDelete = () => {
-    if (!config.ui.confirmOnDelete || confirm("Delete this entry?")) onDelete(entry.id);
+    if (config.ui.confirmOnDelete) setConfirming(true);
+    else onDelete(entry.id);
   };
 
   if (editing) {
@@ -134,22 +136,36 @@ export function EntryRow({
       </div>
 
       <div className="row-trail">
-        <div className="row-actions">
-          <button
-            className={`icon-btn${entry.pinned ? " icon-pinned" : ""}`}
-            title={entry.pinned ? "Unpin" : "Pin to top"}
-            onClick={() => onTogglePin(entry.id)}
-          >
-            {entry.pinned ? "★" : "☆"}
-          </button>
-          <button className="icon-btn" title="Edit" onClick={() => setEditing(true)}>
-            ✎
-          </button>
-          <button className="icon-btn icon-danger" title="Delete" onClick={handleDelete}>
-            ✕
-          </button>
-        </div>
-        {showTime && <span className="row-time">{timeLabel(entry.createdAt)}</span>}
+        {confirming ? (
+          <div className="row-confirm">
+            <span className="confirm-label">Delete?</span>
+            <button className="confirm-yes" onClick={() => onDelete(entry.id)}>
+              Delete
+            </button>
+            <button className="confirm-no" onClick={() => setConfirming(false)}>
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="row-actions">
+              <button
+                className={`icon-btn${entry.pinned ? " icon-pinned" : ""}`}
+                title={entry.pinned ? "Unpin" : "Pin to top"}
+                onClick={() => onTogglePin(entry.id)}
+              >
+                {entry.pinned ? "★" : "☆"}
+              </button>
+              <button className="icon-btn" title="Edit" onClick={() => setEditing(true)}>
+                ✎
+              </button>
+              <button className="icon-btn icon-danger" title="Delete" onClick={handleDelete}>
+                ✕
+              </button>
+            </div>
+            {showTime && <span className="row-time">{timeLabel(entry.createdAt)}</span>}
+          </>
+        )}
       </div>
     </div>
   );
