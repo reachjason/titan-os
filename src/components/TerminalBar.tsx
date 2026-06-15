@@ -115,8 +115,13 @@ export const TerminalBar = forwardRef<TerminalBarHandle, Props>(
               }
             }}
           />
-          <button className="send-btn" onClick={submit} title="Log (Enter)">
-            {config.ui.logLabel}
+          <button
+            className="send-btn"
+            onClick={submit}
+            title={`${config.ui.logLabel} (Enter)`}
+            aria-label={config.ui.logLabel}
+          >
+            ↵
           </button>
         </div>
       </div>

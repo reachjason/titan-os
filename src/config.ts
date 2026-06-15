@@ -56,20 +56,27 @@ export const config = {
 
   /** Copy and behavior toggles. */
   ui: {
-    placeholder: "Log something…  use /todo /idea anywhere in the line",
+    placeholder: "Log…  /tag to label",
+    /** Accessible name for the icon-only log button. */
     logLabel: "Log",
-    searchPlaceholder: "Search text or tags…",
+    searchPlaceholder: "Search",
     /** Ask before deleting an entry. */
     confirmOnDelete: true,
     /** Auto-scroll the feed to the newest entry. */
     autoScroll: true,
   },
 
-  /** Keyboard shortcuts (KeyboardEvent.key values). */
+  /** Keyboard shortcuts (KeyboardEvent.key values; focusSearch uses ⌘/Ctrl). */
   shortcuts: {
-    /** Focus the terminal bar from anywhere. */
+    /** Focus the terminal/log bar from anywhere. */
     focusBar: "/",
-    /** Clear active tag + search filters. */
+    /** Focus the search box (with ⌘ on macOS / Ctrl elsewhere). */
+    focusSearch: "k",
+    /** Cycle sort/group mode: newest-bottom → newest-top → by-tag. */
+    cycleSort: "s",
+    /** Open the keyboard-shortcut help modal. */
+    help: "?",
+    /** Clear active tag + search filters / close modals. */
     clearFilters: "Escape",
   },
 
@@ -77,6 +84,8 @@ export const config = {
   storage: {
     entriesKey: "titan-os.entries.v1",
     themeKey: "titan-os.theme",
+    /** Remembers sort mode + match mode across reloads. */
+    viewKey: "titan-os.view.v1",
   },
 
   /**

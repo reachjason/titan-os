@@ -5,16 +5,51 @@ import { Feed } from "./components/Feed";
 import { TerminalBar, type TerminalBarHandle } from "./components/TerminalBar";
 import { TagChip } from "./components/TagChip";
 import { Settings } from "./components/Settings";
+import { HelpModal } from "./components/HelpModal";
 import { config } from "./config";
 import type { Entry, FilterState, SortMode } from "./types";
+
+/** Sort/group modes shown as the segmented icon control. */
+const SORTS: { mode: SortMode; icon: string; label: string }[] = [
+  { mode: "asc", icon: "↓", label: "Newest at bottom" },
+  { mode: "desc", icon: "↑", label: "Newest at top" },
+  { mode: "tag", icon: "#", label: "Group by tag" },
+];
+
+/** Restore the saved view (sort + match) so the last screen persists. */
+function loadView(): { sort: SortMode; match: "any" | "all" } | null {
+  try {
+    const raw = localStorage.getItem(config.storage.viewKey);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
 
 export default function App() {
   const { entries, add, update, remove, importEntries } = useEntries();
   const { theme, toggle } = useTheme();
-  const [filter, setFilter] = useState<FilterState>({ tags: [], match: "any", query: "" });
-  const [sort, setSort] = useState<SortMode>("asc");
+  const [filter, setFilter] = useState<FilterState>(() => ({
+    tags: [],
+    match: loadView()?.match ?? "any",
+    query: "",
+  }));
+  const [sort, setSort] = useState<SortMode>(() => loadView()?.sort ?? "asc");
+  const [helpOpen, setHelpOpen] = useState(false);
   const barRef = useRef<TerminalBarHandle>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const cycleSort = () =>
+    setSort((s) => SORTS[(SORTS.findIndex((x) => x.mode === s) + 1) % SORTS.length].mode);
+
+  // Persist the view (sort + match) across reloads.
+  useEffect(() => {
+    localStorage.setItem(
+      config.storage.viewKey,
+      JSON.stringify({ sort, match: filter.match })
+    );
+  }, [sort, filter.match]);
 
   const knownTags = useMemo(() => {
     const set = new Set<string>();
@@ -51,15 +86,28 @@ export default function App() {
   const toggleMatch = () =>
     setFilter((f) => ({ ...f, match: f.match === "any" ? "all" : "any" }));
 
-  // Global keyboard shortcuts (only when not typing in a field).
+  // Global keyboard shortcuts.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
       const typing = target.tagName === "INPUT" || target.tagName === "TEXTAREA";
+      // ⌘/Ctrl+K → search, works even while typing elsewhere.
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === config.shortcuts.focusSearch) {
+        e.preventDefault();
+        searchRef.current?.focus();
+        searchRef.current?.select();
+        return;
+      }
       if (typing) return;
-      if (e.key === config.shortcuts.focusBar) {
+      if (e.key === config.shortcuts.help) {
+        e.preventDefault();
+        setHelpOpen(true);
+      } else if (e.key === config.shortcuts.focusBar) {
         e.preventDefault();
         barRef.current?.focus();
+      } else if (e.key.toLowerCase() === config.shortcuts.cycleSort) {
+        e.preventDefault();
+        cycleSort();
       } else if (e.key === config.shortcuts.clearFilters && filtering) {
         clearFilters();
       }
@@ -96,27 +144,30 @@ export default function App() {
   return (
     <div className="app">
       <header className="top-bar">
-        <div className="brand">
+        <div className="brand" title={`${config.brand.name} · ${config.brand.tagline}`}>
           <span className="brand-mark">{config.brand.mark}</span>
-          <span className="brand-name">{config.brand.name}</span>
-          <span className="brand-sub">{config.brand.tagline}</span>
         </div>
 
-        <select
-          className="sort-select"
-          value={sort}
-          onChange={(e) => setSort(e.target.value as SortMode)}
-          title="Sort the feed"
-        >
-          <option value="asc">Newest at bottom</option>
-          <option value="desc">Newest at top</option>
-          <option value="tag">Group by tag</option>
-        </select>
+        <div className="sort-group" role="group" aria-label="Sort and group">
+          {SORTS.map((s) => (
+            <button
+              key={s.mode}
+              className={`sort-btn${sort === s.mode ? " sort-active" : ""}`}
+              onClick={() => setSort(s.mode)}
+              title={`${s.label}  (S to cycle)`}
+              aria-label={s.label}
+            >
+              {s.icon}
+            </button>
+          ))}
+        </div>
 
         <div className="search-wrap">
           <input
+            ref={searchRef}
             className="search-input"
             placeholder={config.ui.searchPlaceholder}
+            title="Search (⌘K)"
             value={filter.query}
             onChange={(e) => setFilter((f) => ({ ...f, query: e.target.value }))}
           />
@@ -136,6 +187,7 @@ export default function App() {
           onToggleTheme={toggle}
           onExport={exportJson}
           onImport={() => fileRef.current?.click()}
+          onHelp={() => setHelpOpen(true)}
         />
         <input
           ref={fileRef}
@@ -187,6 +239,8 @@ export default function App() {
       <footer className="bar-area">
         <TerminalBar ref={barRef} onSubmit={add} knownTags={knownTags} history={history} />
       </footer>
+
+      {helpOpen && <HelpModal onClose={() => setHelpOpen(false)} />}
     </div>
   );
 }

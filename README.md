@@ -17,11 +17,23 @@ npm run build    # typecheck + production build into dist/
 
 - **Log:** type and hit `Enter`. Tags can sit anywhere: `call vendor /urgent re /invoice`.
 - **History:** `↑` / `↓` walk through previous entries like a terminal. `Esc` clears the line.
-- **Filter:** click any tag chip (click more to OR them together). `Esc` clears filters.
+- **Filter:** click any tag chip (click more to combine; toggle `match any` / `match all`). `Esc` clears.
 - **Search:** top bar — matches body text and tags (`/todo` or `todo` both work).
+- **Sort / group:** the icon control toggles newest-bottom (`↓`), newest-top (`↑`), group-by-tag (`#`).
+  In tag mode an entry appears under each of its tags. Sort + match persist across reloads.
 - **Edit / delete:** hover a row for ✎ / ✕.
-- **Settings (⚙):** dark mode, export to JSON, import from JSON.
-- **Shortcuts:** `/` focuses the bar from anywhere.
+- **Settings (⚙):** dark mode, export/import JSON, keyboard shortcuts.
+
+### Keyboard shortcuts (press `?` for the in-app list)
+
+| Key       | Action                            |
+| --------- | --------------------------------- |
+| `⌘/Ctrl K`| Search                            |
+| `/`       | Focus the log bar                 |
+| `S`       | Cycle sort / group                |
+| `?`       | Show shortcuts                    |
+| `Esc`     | Clear filters · cancel · close    |
+| `↑` / `↓` | Previous / next entry (log bar)   |
 
 ## Customize — almost everything lives in [`src/config.ts`](src/config.ts)
 

@@ -6,9 +6,10 @@ interface Props {
   onToggleTheme: () => void;
   onExport: () => void;
   onImport: () => void;
+  onHelp: () => void;
 }
 
-export function Settings({ theme, onToggleTheme, onExport, onImport }: Props) {
+export function Settings({ theme, onToggleTheme, onExport, onImport, onHelp }: Props) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
 
@@ -63,6 +64,16 @@ export function Settings({ theme, onToggleTheme, onExport, onImport }: Props) {
           >
             <span>↑</span>
             Import JSON
+          </button>
+          <button
+            className="settings-item"
+            onClick={() => {
+              setOpen(false);
+              onHelp();
+            }}
+          >
+            <span>?</span>
+            Keyboard shortcuts
           </button>
         </div>
       )}
