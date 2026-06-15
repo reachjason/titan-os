@@ -159,15 +159,6 @@ export default function App() {
           <span className="brand-mark">{config.brand.mark}</span>
         </div>
 
-        <button
-          className={`icon-btn focus-btn${focus ? " focus-on" : ""}`}
-          onClick={() => setFocus((f) => !f)}
-          title="Focus mode — pinned only (F)"
-          aria-pressed={focus}
-        >
-          ◎
-        </button>
-
         {!focus && (
           <>
             <div className="sort-group" role="group" aria-label="Sort and group">
@@ -208,6 +199,15 @@ export default function App() {
             </div>
           </>
         )}
+
+        <button
+          className={`icon-btn focus-btn${focus ? " focus-on" : ""}`}
+          onClick={() => setFocus((f) => !f)}
+          title="Focus mode — pinned only (F)"
+          aria-pressed={focus}
+        >
+          {focus ? "◉" : "◎"}
+        </button>
 
         <button
           className="icon-btn settings-trigger"
