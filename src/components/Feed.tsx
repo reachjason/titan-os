@@ -87,7 +87,7 @@ export function Feed(props: Props) {
       entry={entry}
       query={query}
       activeTags={activeTags}
-      checkable={isTask(entry.tags, taskTags)}
+      checkable={isTask(entry.tags, taskTags) || !!entry.done}
       showTime={showTime}
       onTagClick={onTagClick}
       onEdit={onEdit}
@@ -112,16 +112,10 @@ export function Feed(props: Props) {
   let lastKey = "";
   return (
     <div className="feed">
-      {pinned.length > 0 && (
-        <section className="pin-section">
-          <div className="section-head">
-            <span className="section-icon">★</span> Pinned
-          </div>
-          {pinned.map((e) => (
-            <Fragment key={`pin:${e.id}`}>{renderRow(e)}</Fragment>
-          ))}
-        </section>
-      )}
+      {pinned.map((e) => (
+        <Fragment key={`pin:${e.id}`}>{renderRow(e)}</Fragment>
+      ))}
+      {pinned.length > 0 && items.length > 0 && <div className="pin-divider" />}
 
       {items.map((it) => {
         const showDivider = it.group !== lastKey;

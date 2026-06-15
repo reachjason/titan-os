@@ -54,9 +54,22 @@ export function useEntries() {
     setEntries((prev) => [...prev, entry]);
   }, []);
 
-  const toggleDone = useCallback((id: string) => {
+  // Completing a task rewrites its task tag (e.g. /do) to /done; unchecking reverts to /do.
+  const toggleDone = useCallback((id: string, taskTags: string[]) => {
     setEntries((prev) =>
-      prev.map((e) => (e.id === id ? { ...e, done: !e.done } : e))
+      prev.map((e) => {
+        if (e.id !== id) return e;
+        const from = e.done ? ["done"] : taskTags;
+        const to = e.done ? "do" : "done";
+        const tags = Array.from(
+          new Set(e.tags.map((t) => (from.includes(t) ? to : t)))
+        );
+        const raw = e.raw.replace(
+          /(^|\s)\/([a-z0-9][a-z0-9_-]*)/gi,
+          (m, sp, tag) => (from.includes(tag.toLowerCase()) ? `${sp}/${to}` : m)
+        );
+        return { ...e, done: !e.done, tags, raw };
+      })
     );
   }, []);
 

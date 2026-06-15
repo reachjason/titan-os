@@ -240,7 +240,7 @@ export default function App() {
           onTagClick={toggleTag}
           onEdit={update}
           onDelete={remove}
-          onToggleDone={toggleDone}
+          onToggleDone={(id) => toggleDone(id, prefs.taskTags)}
           onTogglePin={togglePin}
         />
       </main>

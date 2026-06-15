@@ -52,6 +52,7 @@ export const config = {
     { name: "note", hint: "a plain note", hue: 200 },
     { name: "urgent", hint: "needs attention now", hue: 2 },
     { name: "followup", hint: "circle back later", hue: 280 },
+    { name: "done", hint: "completed task", hue: 145 },
   ] as CommandDef[],
 
   /** Copy and behavior toggles. */

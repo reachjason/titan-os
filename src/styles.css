@@ -282,28 +282,11 @@ body {
   border: 1px solid var(--line);
 }
 
-/* ---------- Pinned focus section ---------- */
-.pin-section {
-  background: var(--bg-raised);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 4px 4px 6px;
-  margin-bottom: 14px;
-}
-.section-head {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-family: var(--font-display);
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.09em;
-  color: var(--ink-soft);
-  padding: 6px 10px 4px;
-}
-.section-icon {
-  color: var(--clay);
+/* ---------- Pinned: just sit on top, minimal hairline below ---------- */
+.pin-divider {
+  height: 1px;
+  background: var(--line);
+  margin: 8px 10px 12px;
 }
 
 /* ---------- To-do rows: [check] tags + text … [actions] [time] ---------- */
@@ -316,9 +299,6 @@ body {
   transition: background 0.12s;
 }
 .row:hover {
-  background: var(--bg-sunk);
-}
-.pin-section .row:hover {
   background: var(--bg-sunk);
 }
 
@@ -338,6 +318,7 @@ body {
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  user-select: none; /* keep ✓ out of copy/paste */
   transition: background 0.12s, border-color 0.12s, transform 0.08s;
 }
 .check:hover {
@@ -358,6 +339,7 @@ body {
   width: 19px;
   height: 19px;
   margin-top: 2px;
+  user-select: none;
 }
 .bullet::after {
   content: "";
@@ -451,10 +433,6 @@ body {
 }
 .row:hover .row-actions .icon-btn {
   opacity: 1;
-}
-.row-pinned .icon-pinned {
-  opacity: 1;
-  color: var(--clay);
 }
 .icon-btn {
   border: none;
