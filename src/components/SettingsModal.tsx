@@ -86,7 +86,7 @@ export function SettingsModal({
         <div className="set-row">
           <div className="set-label">
             Show timestamps
-            <span className="set-sub">Faint time on each row. (h c / s c)</span>
+            <span className="set-sub">Faint time on each row. (t c)</span>
           </div>
           <Toggle on={prefs.showTimestamps} onClick={onToggleTimestamps} />
         </div>
@@ -94,7 +94,7 @@ export function SettingsModal({
         <div className="set-row">
           <div className="set-label">
             Show tags
-            <span className="set-sub">Tag chips on each row. (h t / s t)</span>
+            <span className="set-sub">Tag chips on each row. (t t)</span>
           </div>
           <Toggle on={prefs.showTags} onClick={onToggleTags} />
         </div>

@@ -34,8 +34,7 @@ export default function App() {
   const { entries, add, update, remove, toggleDone, togglePin, moveCard, setOrder, importEntries } =
     useEntries();
   const { theme, toggle } = useTheme();
-  const { prefs, toggleTimestamps, toggleTags, setTimestamps, setTags, addTaskTag, removeTaskTag } =
-    usePrefs();
+  const { prefs, toggleTimestamps, toggleTags, addTaskTag, removeTaskTag } = usePrefs();
   const [filter, setFilter] = useState<FilterState>(() => ({
     tags: [],
     match: loadView()?.match ?? "any",
@@ -112,26 +111,25 @@ export default function App() {
       if (typing) return;
       const k = e.key.toLowerCase();
 
-      // Resolve a pending chord: h_/s_ → c = timestamps, t = tags.
-      if (chordRef.current) {
-        const lead = chordRef.current;
+      // Resolve a pending "t" chord: t c → toggle timestamps, t t → toggle tags.
+      if (chordRef.current === "t") {
         chordRef.current = null;
         window.clearTimeout(chordTimer.current);
         if (k === "c") {
           e.preventDefault();
-          setTimestamps(lead === "s");
+          toggleTimestamps();
           return;
         }
         if (k === "t") {
           e.preventDefault();
-          setTags(lead === "s");
+          toggleTags();
           return;
         }
         // not a chord completion — fall through and treat k normally
       }
-      // Start a chord on the leader keys.
-      if (k === "h" || k === "s") {
-        chordRef.current = k;
+      // Start the chord on the leader key.
+      if (k === "t") {
+        chordRef.current = "t";
         chordTimer.current = window.setTimeout(() => (chordRef.current = null), 800);
         return;
       }
@@ -152,7 +150,7 @@ export default function App() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [filtering, focus, view, setTimestamps, setTags]);
+  }, [filtering, focus, view, toggleTimestamps, toggleTags]);
 
   const exportJson = () => {
     const blob = new Blob([JSON.stringify(entries, null, 2)], {
