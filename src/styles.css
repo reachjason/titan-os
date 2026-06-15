@@ -67,11 +67,26 @@ body {
   letter-spacing: 0.12em;
 }
 
+.sort-select {
+  margin-left: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--ink-soft);
+  font-family: var(--font-body);
+  font-size: 13px;
+  padding: 7px 8px;
+  cursor: pointer;
+  outline: none;
+}
+.sort-select:focus {
+  border-color: var(--clay);
+}
+
 .search-wrap {
   position: relative;
   flex: 1;
-  max-width: 360px;
-  margin-left: auto;
+  max-width: 300px;
 }
 .search-input {
   width: 100%;
@@ -171,6 +186,20 @@ body {
   letter-spacing: 0.1em;
   color: var(--ink-faint);
 }
+.match-toggle {
+  border: 1px solid var(--line);
+  background: var(--bg-raised);
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.match-toggle:hover {
+  border-color: var(--clay);
+  color: var(--clay-deep);
+}
 .filter-clear {
   margin-left: auto;
   border: none;
@@ -179,6 +208,23 @@ body {
   cursor: pointer;
   font-size: 12px;
   text-decoration: underline;
+}
+
+/* Tag-group headers when sorting "by tag". */
+.tag-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 16px 0 10px;
+}
+.tag-divider-plain {
+  font-family: var(--font-display);
+  font-size: 13px;
+  color: var(--ink-faint);
+  background: var(--bg-sunk);
+  padding: 3px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
 }
 
 /* ---------- Feed ---------- */

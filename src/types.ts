@@ -13,9 +13,14 @@ export interface Entry {
 
 export type Theme = "light" | "dark";
 
+/** Feed ordering: oldest→newest (chat), newest→oldest, or grouped by tag. */
+export type SortMode = "asc" | "desc" | "tag";
+
 export interface FilterState {
-  /** Active tag filters (OR'd together). Empty = no tag filter. */
+  /** Active tag filters. Empty = no tag filter. */
   tags: string[];
+  /** How multiple tag filters combine: "any" = OR, "all" = AND. */
+  match: "any" | "all";
   /** Free-text search query. */
   query: string;
 }

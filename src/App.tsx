@@ -6,12 +6,13 @@ import { TerminalBar, type TerminalBarHandle } from "./components/TerminalBar";
 import { TagChip } from "./components/TagChip";
 import { Settings } from "./components/Settings";
 import { config } from "./config";
-import type { Entry, FilterState } from "./types";
+import type { Entry, FilterState, SortMode } from "./types";
 
 export default function App() {
   const { entries, add, update, remove, importEntries } = useEntries();
   const { theme, toggle } = useTheme();
-  const [filter, setFilter] = useState<FilterState>({ tags: [], query: "" });
+  const [filter, setFilter] = useState<FilterState>({ tags: [], match: "any", query: "" });
+  const [sort, setSort] = useState<SortMode>("asc");
   const barRef = useRef<TerminalBarHandle>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -28,7 +29,10 @@ export default function App() {
     const q = filter.query.trim().toLowerCase().replace(/^\//, "");
     return entries.filter((e) => {
       const tagOk =
-        filter.tags.length === 0 || e.tags.some((t) => filter.tags.includes(t));
+        filter.tags.length === 0 ||
+        (filter.match === "all"
+          ? filter.tags.every((t) => e.tags.includes(t))
+          : filter.tags.some((t) => e.tags.includes(t)));
       const textOk =
         !q || e.body.toLowerCase().includes(q) || e.tags.some((t) => t.includes(q));
       return tagOk && textOk;
@@ -43,7 +47,9 @@ export default function App() {
       tags: f.tags.includes(tag) ? f.tags.filter((t) => t !== tag) : [...f.tags, tag],
     }));
 
-  const clearFilters = () => setFilter({ tags: [], query: "" });
+  const clearFilters = () => setFilter({ tags: [], match: filter.match, query: "" });
+  const toggleMatch = () =>
+    setFilter((f) => ({ ...f, match: f.match === "any" ? "all" : "any" }));
 
   // Global keyboard shortcuts (only when not typing in a field).
   useEffect(() => {
@@ -96,6 +102,17 @@ export default function App() {
           <span className="brand-sub">{config.brand.tagline}</span>
         </div>
 
+        <select
+          className="sort-select"
+          value={sort}
+          onChange={(e) => setSort(e.target.value as SortMode)}
+          title="Sort the feed"
+        >
+          <option value="asc">Newest at bottom</option>
+          <option value="desc">Newest at top</option>
+          <option value="tag">Group by tag</option>
+        </select>
+
         <div className="search-wrap">
           <input
             className="search-input"
@@ -139,6 +156,15 @@ export default function App() {
           {filter.tags.map((t) => (
             <TagChip key={t} tag={t} active onClick={toggleTag} />
           ))}
+          {filter.tags.length > 1 && (
+            <button
+              className="match-toggle"
+              onClick={toggleMatch}
+              title="Match entries with any vs. all of these tags"
+            >
+              {filter.match === "any" ? "match any" : "match all"}
+            </button>
+          )}
           <button className="filter-clear" onClick={clearFilters}>
             clear · esc
           </button>
@@ -148,6 +174,7 @@ export default function App() {
       <main className="feed-area">
         <Feed
           entries={filtered}
+          sort={sort}
           query={filter.query}
           activeTags={filter.tags}
           filtering={filtering}
