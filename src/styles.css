@@ -69,7 +69,7 @@ body {
 
 .focus-btn {
   margin-left: auto;
-  font-size: 16px;
+  font-size: 18px;
   color: var(--ink-faint);
   padding: 5px 7px;
 }
@@ -152,9 +152,9 @@ body {
   position: relative;
 }
 .settings-trigger {
-  font-size: 16px;
+  font-size: 20px;
   color: var(--ink-faint);
-  padding: 6px;
+  padding: 5px 7px;
 }
 .settings-trigger:hover {
   color: var(--ink);
