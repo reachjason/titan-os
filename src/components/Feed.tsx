@@ -83,14 +83,16 @@ export function Feed(props: Props) {
     if (autoScroll) bottomRef.current?.scrollIntoView({ block: "end" });
   }, [items.length, autoScroll]);
 
-  // Shared row renderer so pinned + feed look identical.
-  const renderRow = (entry: Entry) => (
+  // Shared row renderer so pinned + feed look identical. `minimal` strips
+  // tags + time for the focus view.
+  const renderRow = (entry: Entry, minimal = false) => (
     <EntryRow
       entry={entry}
       query={query}
       activeTags={activeTags}
       checkable={isTask(entry.tags, taskTags) || !!entry.done}
-      showTime={showTime}
+      showTime={minimal ? false : showTime}
+      hideTags={minimal}
       onTagClick={onTagClick}
       onEdit={onEdit}
       onDelete={onDelete}
@@ -104,7 +106,7 @@ export function Feed(props: Props) {
     return (
       <div className="feed feed-focus">
         {pinned.length > 0 ? (
-          pinned.map((e) => <Fragment key={`pin:${e.id}`}>{renderRow(e)}</Fragment>)
+          pinned.map((e) => <Fragment key={`pin:${e.id}`}>{renderRow(e, true)}</Fragment>)
         ) : (
           <div className="feed-empty">
             <p>Nothing pinned. Pin a task with ★, then press F to focus on it.</p>

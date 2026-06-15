@@ -11,6 +11,8 @@ interface Props {
   /** This entry carries a task tag → show a checkbox. */
   checkable: boolean;
   showTime: boolean;
+  /** Hide tag chips (used in focus mode for a clean view). */
+  hideTags?: boolean;
   onTagClick: (tag: string) => void;
   onEdit: (id: string, raw: string) => void;
   onDelete: (id: string) => void;
@@ -41,6 +43,7 @@ export function EntryRow({
   activeTags,
   checkable,
   showTime,
+  hideTags,
   onTagClick,
   onEdit,
   onDelete,
@@ -121,11 +124,12 @@ export function EntryRow({
       )}
 
       <div className="row-line">
-        {entry.tags.map((t) => (
-          <Fragment key={t}>
-            <TagChip tag={t} active={activeTags.includes(t)} onClick={onTagClick} />{" "}
-          </Fragment>
-        ))}
+        {!hideTags &&
+          entry.tags.map((t) => (
+            <Fragment key={t}>
+              <TagChip tag={t} active={activeTags.includes(t)} onClick={onTagClick} />{" "}
+            </Fragment>
+          ))}
         {entry.body && <span className="row-body">{highlight(entry.body, query)}</span>}
         {entry.edited && (
           <span className="edited-flag" title="edited">
