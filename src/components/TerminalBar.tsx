@@ -19,9 +19,8 @@ export const TerminalBar = forwardRef<TerminalBarHandle, Props>(
   ({ onSubmit, knownTags, history }, ref) => {
     const [value, setValue] = useState("");
     const [sel, setSel] = useState(0);
-    // 0 = composing fresh input; n = nth entry from the end (1 = most recent).
     const [histPos, setHistPos] = useState(0);
-    const inputRef = useRef<HTMLInputElement>(null);
+    const inputRef = useRef<HTMLTextAreaElement>(null);
 
     useImperativeHandle(ref, () => ({
       focus: () => inputRef.current?.focus(),
@@ -35,9 +34,22 @@ export const TerminalBar = forwardRef<TerminalBarHandle, Props>(
             .slice(0, 6)
         : [];
 
+    // Grow the textarea to fit its content (capped by CSS max-height).
+    const autoSize = () => {
+      const el = inputRef.current;
+      if (!el) return;
+      el.style.height = "auto";
+      el.style.height = `${el.scrollHeight}px`;
+    };
+    const reset = () => {
+      const el = inputRef.current;
+      if (el) el.style.height = "auto";
+    };
+
     const applySuggestion = (tag: string) => {
       setValue((v) => v.replace(/\/([a-z0-9_-]*)$/i, `/${tag} `));
       setSel(0);
+      requestAnimationFrame(autoSize);
       inputRef.current?.focus();
     };
 
@@ -47,13 +59,14 @@ export const TerminalBar = forwardRef<TerminalBarHandle, Props>(
       setValue("");
       setSel(0);
       setHistPos(0);
+      reset();
     };
 
-    // Walk the entry history like a shell: ↑ older, ↓ newer, 0 = blank line.
     const recall = (pos: number) => {
       const clamped = Math.max(0, Math.min(pos, history.length));
       setHistPos(clamped);
       setValue(clamped === 0 ? "" : history[history.length - clamped]);
+      requestAnimationFrame(autoSize);
     };
 
     return (
@@ -77,48 +90,56 @@ export const TerminalBar = forwardRef<TerminalBarHandle, Props>(
         )}
         <div className="terminal-bar">
           <span className="prompt-glyph">›</span>
-          <input
+          <textarea
             ref={inputRef}
             className="terminal-input"
             value={value}
+            rows={1}
             placeholder={config.ui.placeholder}
             spellCheck={false}
             autoFocus
             onChange={(e) => {
               setValue(e.target.value);
               setSel(0);
-              setHistPos(0); // typing breaks out of history browsing
+              setHistPos(0);
+              autoSize();
             }}
             onKeyDown={(e) => {
+              const el = e.currentTarget;
               if (e.key === "ArrowDown" && suggestions.length > 0) {
                 e.preventDefault();
                 setSel((s) => (s + 1) % suggestions.length);
               } else if (e.key === "ArrowUp" && suggestions.length > 0) {
                 e.preventDefault();
                 setSel((s) => (s - 1 + suggestions.length) % suggestions.length);
-              } else if (e.key === "ArrowUp") {
+              } else if (e.key === "ArrowUp" && el.selectionStart === 0) {
+                // caret at very start → recall older entry
                 e.preventDefault();
-                recall(histPos + 1); // older
-              } else if (e.key === "ArrowDown") {
+                recall(histPos + 1);
+              } else if (e.key === "ArrowDown" && el.selectionStart === value.length) {
+                // caret at very end → recall newer entry
                 e.preventDefault();
-                recall(histPos - 1); // newer
-              } else if (e.key === "Enter") {
+                recall(histPos - 1);
+              } else if (e.key === "Enter" && !e.shiftKey) {
+                // Enter submits; Shift+Enter inserts a newline (default).
                 e.preventDefault();
                 if (suggestions.length > 0) applySuggestion(suggestions[sel]);
                 else submit();
               } else if (e.key === config.shortcuts.clearFilters) {
-                // Esc clears & cancels the line (and any open suggestions).
+                // Esc clears the line and moves focus out of the bar.
                 e.preventDefault();
                 setValue("");
                 setSel(0);
                 setHistPos(0);
+                reset();
+                el.blur();
               }
             }}
           />
           <button
             className="send-btn"
             onClick={submit}
-            title={`${config.ui.logLabel} (Enter)`}
+            title={`${config.ui.logLabel} (Enter · Shift+Enter for newline)`}
             aria-label={config.ui.logLabel}
           >
             ↵

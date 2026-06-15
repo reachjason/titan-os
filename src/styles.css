@@ -301,11 +301,21 @@ body {
   border: 1px solid var(--line);
 }
 
-/* ---------- Pinned: just sit on top, minimal hairline below ---------- */
-.pin-divider {
-  height: 1px;
-  background: var(--line);
-  margin: 8px 10px 12px;
+/* ---------- Pinned notch: always-visible tray under the header ---------- */
+.pin-notch {
+  flex-shrink: 0;
+  background: var(--bg-sunk);
+  border-bottom: 1px solid var(--line);
+  padding: 6px 12px;
+  max-height: 38vh;
+  overflow-y: auto;
+}
+.pin-notch .row {
+  padding-left: 8px;
+  padding-right: 8px;
+}
+.pin-notch .row:hover {
+  background: var(--bg-raised);
 }
 
 /* ---------- To-do rows: [check] tags + text … [actions] [time] ---------- */
@@ -383,6 +393,7 @@ body {
   font-size: 15px;
   color: var(--ink);
   vertical-align: middle;
+  white-space: pre-wrap; /* preserve multiline entries */
 }
 .row-body mark {
   background: var(--mark);
@@ -515,7 +526,7 @@ body {
 }
 .terminal-bar {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 10px;
   background: var(--bg-sunk);
   border: 1px solid var(--line);
@@ -532,6 +543,7 @@ body {
   font-family: var(--font-mono);
   font-size: 18px;
   font-weight: 500;
+  margin-bottom: 8px;
 }
 .terminal-input {
   flex: 1;
@@ -541,7 +553,11 @@ body {
   color: var(--ink);
   font-family: var(--font-mono);
   font-size: 15px;
-  padding: 10px 0;
+  line-height: 1.5;
+  padding: 9px 0;
+  resize: none;
+  max-height: 38vh;
+  overflow-y: auto;
 }
 .terminal-input::placeholder {
   color: var(--ink-faint);

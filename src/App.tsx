@@ -7,6 +7,7 @@ import { TerminalBar, type TerminalBarHandle } from "./components/TerminalBar";
 import { TagChip } from "./components/TagChip";
 import { SettingsModal } from "./components/SettingsModal";
 import { HelpModal } from "./components/HelpModal";
+import { PinnedNotch } from "./components/PinnedNotch";
 import { config } from "./config";
 import type { Entry, FilterState, SortMode } from "./types";
 
@@ -63,6 +64,7 @@ export default function App() {
   }, [entries]);
 
   const history = useMemo(() => entries.map((e) => e.raw), [entries]);
+  const pinned = useMemo(() => entries.filter((e) => e.pinned), [entries]);
 
   const filtered = useMemo(() => {
     // Search matches body text or tags; a leading slash in the query is optional.
@@ -190,6 +192,9 @@ export default function App() {
                 title="Search (⌘K)"
                 value={filter.query}
                 onChange={(e) => setFilter((f) => ({ ...f, query: e.target.value }))}
+                onKeyDown={(e) => {
+                  if (e.key === config.shortcuts.clearFilters) e.currentTarget.blur();
+                }}
               />
               {filter.query && (
                 <button
@@ -244,6 +249,21 @@ export default function App() {
             clear · esc
           </button>
         </div>
+      )}
+
+      {!focus && (
+        <PinnedNotch
+          entries={pinned}
+          query={filter.query}
+          activeTags={filter.tags}
+          taskTags={prefs.taskTags}
+          showTime={prefs.showTimestamps}
+          onTagClick={toggleTag}
+          onEdit={update}
+          onDelete={remove}
+          onToggleDone={(id) => toggleDone(id, prefs.taskTags)}
+          onTogglePin={togglePin}
+        />
       )}
 
       <main className="feed-area">

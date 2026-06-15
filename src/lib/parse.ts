@@ -16,7 +16,8 @@ export function parseEntry(raw: string): { tags: string[]; body: string } {
   }
   const body = raw
     .replace(TAG, "$1") // drop the /tag, keep its leading space
-    .replace(/\s{2,}/g, " ")
+    .replace(/[ \t]{2,}/g, " ") // collapse runs of spaces/tabs (keep newlines)
+    .replace(/[ \t]*\n[ \t]*/g, "\n") // tidy whitespace around newlines
     .trim();
   return { tags, body };
 }

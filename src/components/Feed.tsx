@@ -129,11 +129,6 @@ export function Feed(props: Props) {
   let lastKey = "";
   return (
     <div className="feed">
-      {pinned.map((e) => (
-        <Fragment key={`pin:${e.id}`}>{renderRow(e)}</Fragment>
-      ))}
-      {pinned.length > 0 && items.length > 0 && <div className="pin-divider" />}
-
       {items.map((it) => {
         const showDivider = it.group !== lastKey;
         lastKey = it.group;
