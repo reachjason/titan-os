@@ -6,6 +6,7 @@ interface Props {
   onToggleTheme: () => void;
   prefs: Prefs;
   onToggleTimestamps: () => void;
+  onToggleTags: () => void;
   onAddTaskTag: (tag: string) => void;
   onRemoveTaskTag: (tag: string) => void;
   knownTags: string[];
@@ -33,6 +34,7 @@ export function SettingsModal({
   onToggleTheme,
   prefs,
   onToggleTimestamps,
+  onToggleTags,
   onAddTaskTag,
   onRemoveTaskTag,
   knownTags,
@@ -84,9 +86,17 @@ export function SettingsModal({
         <div className="set-row">
           <div className="set-label">
             Show timestamps
-            <span className="set-sub">Faint time on each row.</span>
+            <span className="set-sub">Faint time on each row. (h c / s c)</span>
           </div>
           <Toggle on={prefs.showTimestamps} onClick={onToggleTimestamps} />
+        </div>
+
+        <div className="set-row">
+          <div className="set-label">
+            Show tags
+            <span className="set-sub">Tag chips on each row. (h t / s t)</span>
+          </div>
+          <Toggle on={prefs.showTags} onClick={onToggleTags} />
         </div>
 
         <div className="set-block">

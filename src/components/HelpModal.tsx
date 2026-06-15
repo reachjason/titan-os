@@ -7,11 +7,12 @@ interface Props {
 const SHORTCUTS: { keys: string[]; label: string }[] = [
   { keys: ["⌘", "K"], label: "Search" },
   { keys: ["/"], label: "Focus the log bar" },
-  { keys: ["S"], label: "Cycle sort / group" },
   { keys: ["F"], label: "Focus mode — pinned only" },
+  { keys: ["H", "C"], label: "Hide timestamps  ·  S C to show" },
+  { keys: ["H", "T"], label: "Hide tags  ·  S T to show" },
   { keys: ["?"], label: "Show this help" },
   { keys: ["Esc"], label: "Clear filters · cancel · close" },
-  { keys: ["Enter"], label: "Log the entry" },
+  { keys: ["Enter"], label: "Log the entry  ·  Shift+Enter newline" },
   { keys: ["↑", "↓"], label: "Previous / next entry (in the log bar)" },
   { keys: ["click tag"], label: "Filter — click more tags to combine" },
 ];

@@ -17,6 +17,7 @@ interface Props {
   focus: boolean;
   taskTags: string[];
   showTime: boolean;
+  showTags: boolean;
   onTagClick: (tag: string) => void;
   onEdit: (id: string, raw: string) => void;
   onDelete: (id: string) => void;
@@ -68,6 +69,7 @@ export function Feed(props: Props) {
     focus,
     taskTags,
     showTime,
+    showTags,
     onTagClick,
     onEdit,
     onDelete,
@@ -100,7 +102,7 @@ export function Feed(props: Props) {
       activeTags={activeTags}
       checkable={isTask(entry.tags, taskTags) || !!entry.done}
       showTime={minimal ? false : showTime}
-      hideTags={minimal}
+      hideTags={!showTags}
       onTagClick={onTagClick}
       onEdit={onEdit}
       onDelete={onDelete}

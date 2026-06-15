@@ -87,6 +87,8 @@ export const config = {
   prefs: {
     /** Show the faint per-row timestamp. */
     showTimestamps: true,
+    /** Show tag chips on rows. */
+    showTags: true,
     /** Tags that make an entry a checkable task. */
     taskTags: ["do", "todo"],
   },

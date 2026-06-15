@@ -27,6 +27,8 @@ export type ViewMode = "list" | "board";
 export interface Prefs {
   /** Show the faint per-row timestamp. */
   showTimestamps: boolean;
+  /** Show tag chips on rows. */
+  showTags: boolean;
   /** Tags that turn an entry into a checkable task, e.g. ["do","todo"]. */
   taskTags: string[];
 }

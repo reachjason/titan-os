@@ -8,6 +8,7 @@ interface Props {
   activeTags: string[];
   taskTags: string[];
   showTime: boolean;
+  showTags: boolean;
   onTagClick: (tag: string) => void;
   onEdit: (id: string, raw: string) => void;
   onDelete: (id: string) => void;
@@ -22,6 +23,7 @@ export function PinnedNotch({
   activeTags,
   taskTags,
   showTime,
+  showTags,
   onTagClick,
   onEdit,
   onDelete,
@@ -39,6 +41,7 @@ export function PinnedNotch({
           activeTags={activeTags}
           checkable={isTask(e.tags, taskTags) || !!e.done}
           showTime={showTime}
+          hideTags={!showTags}
           onTagClick={onTagClick}
           onEdit={onEdit}
           onDelete={onDelete}

@@ -34,7 +34,8 @@ export default function App() {
   const { entries, add, update, remove, toggleDone, togglePin, moveCard, setOrder, importEntries } =
     useEntries();
   const { theme, toggle } = useTheme();
-  const { prefs, toggleTimestamps, addTaskTag, removeTaskTag } = usePrefs();
+  const { prefs, toggleTimestamps, toggleTags, setTimestamps, setTags, addTaskTag, removeTaskTag } =
+    usePrefs();
   const [filter, setFilter] = useState<FilterState>(() => ({
     tags: [],
     match: loadView()?.match ?? "any",
@@ -48,9 +49,9 @@ export default function App() {
   const barRef = useRef<TerminalBarHandle>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
-
-  const cycleSort = () =>
-    setSort((s) => SORTS[(SORTS.findIndex((x) => x.mode === s) + 1) % SORTS.length].mode);
+  // Pending leader key for two-stroke chords (h_/s_), reset after a short window.
+  const chordRef = useRef<string | null>(null);
+  const chordTimer = useRef<number | undefined>(undefined);
 
   // Persist the view (sort + match + list/board) across reloads.
   useEffect(() => {
@@ -109,18 +110,41 @@ export default function App() {
         return;
       }
       if (typing) return;
+      const k = e.key.toLowerCase();
+
+      // Resolve a pending chord: h_/s_ → c = timestamps, t = tags.
+      if (chordRef.current) {
+        const lead = chordRef.current;
+        chordRef.current = null;
+        window.clearTimeout(chordTimer.current);
+        if (k === "c") {
+          e.preventDefault();
+          setTimestamps(lead === "s");
+          return;
+        }
+        if (k === "t") {
+          e.preventDefault();
+          setTags(lead === "s");
+          return;
+        }
+        // not a chord completion — fall through and treat k normally
+      }
+      // Start a chord on the leader keys.
+      if (k === "h" || k === "s") {
+        chordRef.current = k;
+        chordTimer.current = window.setTimeout(() => (chordRef.current = null), 800);
+        return;
+      }
+
       if (e.key === config.shortcuts.help) {
         e.preventDefault();
         setHelpOpen(true);
-      } else if (e.key.toLowerCase() === config.shortcuts.focusMode && view === "list") {
+      } else if (k === config.shortcuts.focusMode && view === "list") {
         e.preventDefault();
         setFocus((f) => !f);
       } else if (e.key === config.shortcuts.focusBar) {
         e.preventDefault();
         barRef.current?.focus();
-      } else if (e.key.toLowerCase() === config.shortcuts.cycleSort && view === "list") {
-        e.preventDefault();
-        cycleSort();
       } else if (e.key === config.shortcuts.clearFilters) {
         if (focus) setFocus(false);
         else if (filtering) clearFilters();
@@ -128,7 +152,7 @@ export default function App() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [filtering, focus, view]);
+  }, [filtering, focus, view, setTimestamps, setTags]);
 
   const exportJson = () => {
     const blob = new Blob([JSON.stringify(entries, null, 2)], {
@@ -187,7 +211,7 @@ export default function App() {
                   key={s.mode}
                   className={`sort-btn${sort === s.mode ? " sort-active" : ""}`}
                   onClick={() => setSort(s.mode)}
-                  title={`${s.label}  (S to cycle)`}
+                  title={s.label}
                   aria-label={s.label}
                 >
                   {s.icon}
@@ -293,6 +317,7 @@ export default function App() {
               activeTags={filter.tags}
               taskTags={prefs.taskTags}
               showTime={prefs.showTimestamps}
+              showTags={prefs.showTags}
               onTagClick={toggleTag}
               onEdit={update}
               onDelete={remove}
@@ -311,6 +336,7 @@ export default function App() {
               focus={focus}
               taskTags={prefs.taskTags}
               showTime={prefs.showTimestamps}
+              showTags={prefs.showTags}
               onTagClick={toggleTag}
               onEdit={update}
               onDelete={remove}
@@ -332,6 +358,7 @@ export default function App() {
           onToggleTheme={toggle}
           prefs={prefs}
           onToggleTimestamps={toggleTimestamps}
+          onToggleTags={toggleTags}
           onAddTaskTag={addTaskTag}
           onRemoveTaskTag={removeTaskTag}
           knownTags={knownTags}

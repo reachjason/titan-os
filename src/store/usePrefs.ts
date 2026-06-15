@@ -7,6 +7,7 @@ const KEY = config.storage.prefsKey;
 function load(): Prefs {
   const defaults: Prefs = {
     showTimestamps: config.prefs.showTimestamps,
+    showTags: config.prefs.showTags,
     taskTags: [...config.prefs.taskTags],
   };
   try {
@@ -29,6 +30,18 @@ export function usePrefs() {
     () => setPrefs((p) => ({ ...p, showTimestamps: !p.showTimestamps })),
     []
   );
+  const toggleTags = useCallback(
+    () => setPrefs((p) => ({ ...p, showTags: !p.showTags })),
+    []
+  );
+  const setTimestamps = useCallback(
+    (on: boolean) => setPrefs((p) => ({ ...p, showTimestamps: on })),
+    []
+  );
+  const setTags = useCallback(
+    (on: boolean) => setPrefs((p) => ({ ...p, showTags: on })),
+    []
+  );
 
   const addTaskTag = useCallback((tag: string) => {
     const t = tag.trim().toLowerCase().replace(/^\//, "");
@@ -44,7 +57,15 @@ export function usePrefs() {
     []
   );
 
-  return { prefs, toggleTimestamps, addTaskTag, removeTaskTag };
+  return {
+    prefs,
+    toggleTimestamps,
+    toggleTags,
+    setTimestamps,
+    setTags,
+    addTaskTag,
+    removeTaskTag,
+  };
 }
 
 /** Whether an entry is a checkable task given the current task tags. */
