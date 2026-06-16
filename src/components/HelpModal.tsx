@@ -11,6 +11,7 @@ const SHORTCUTS: { keys: string[]; label: string }[] = [
   { keys: ["esc"], label: "Dismiss / close" },
   { keys: ["v"], label: "List / Board" },
   { keys: ["p"], label: "Focus pinned" },
+  { keys: ["⇧P"], label: "Expand / minimize pinned" },
   { keys: ["t", "c"], label: "Toggle timestamps" },
   { keys: ["t", "t"], label: "Toggle tags" },
   { keys: ["click ☑"], label: "Complete task" },

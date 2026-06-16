@@ -46,7 +46,12 @@ const SORTS: { mode: SortMode; icon: string; label: string }[] = [
 ];
 
 /** Restore the saved view (sort + match + list/board) so the last screen persists. */
-function loadView(): { sort: SortMode; match: "any" | "all"; view: ViewMode } | null {
+function loadView(): {
+  sort: SortMode;
+  match: "any" | "all";
+  view: ViewMode;
+  pinnedCollapsed?: boolean;
+} | null {
   try {
     const raw = localStorage.getItem(config.storage.viewKey);
     return raw ? JSON.parse(raw) : null;
@@ -71,6 +76,10 @@ function Workspace() {
   }));
   const [sort, setSort] = useState<SortMode>(() => loadView()?.sort ?? "asc");
   const [view, setView] = useState<ViewMode>(() => loadView()?.view ?? "list");
+  // Pinned tray starts minimized (just a count); expand via click or Shift+P.
+  const [pinnedCollapsed, setPinnedCollapsed] = useState<boolean>(
+    () => loadView()?.pinnedCollapsed ?? true
+  );
   const [helpOpen, setHelpOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [spotOpen, setSpotOpen] = useState(false);
@@ -90,9 +99,9 @@ function Workspace() {
   useEffect(() => {
     localStorage.setItem(
       config.storage.viewKey,
-      JSON.stringify({ sort, match: filter.match, view })
+      JSON.stringify({ sort, match: filter.match, view, pinnedCollapsed })
     );
-  }, [sort, filter.match, view]);
+  }, [sort, filter.match, view, pinnedCollapsed]);
 
   const knownTags = useMemo(() => {
     const set = new Set<string>();
@@ -160,6 +169,13 @@ function Workspace() {
       if (e.shiftKey && k === config.shortcuts.search) {
         e.preventDefault();
         setSpotOpen(true);
+        return;
+      }
+
+      // Shift+P → expand/minimize the pinned tray.
+      if (e.shiftKey && k === "p") {
+        e.preventDefault();
+        setPinnedCollapsed((c) => !c);
         return;
       }
 
@@ -443,6 +459,8 @@ function Workspace() {
             {!focus && (
               <PinnedNotch
                 entries={pinned}
+                collapsed={pinnedCollapsed}
+                onToggleCollapsed={() => setPinnedCollapsed((c) => !c)}
                 activeTags={filter.tags}
                 activeMentions={filter.mentions}
                 taskTags={prefs.taskTags}

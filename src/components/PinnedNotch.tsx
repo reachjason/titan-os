@@ -4,6 +4,8 @@ import { isTask } from "../store/usePrefs";
 
 interface Props {
   entries: Entry[];
+  collapsed: boolean;
+  onToggleCollapsed: () => void;
   activeTags: string[];
   activeMentions: string[];
   taskTags: string[];
@@ -20,6 +22,8 @@ interface Props {
 /** Always-visible tray of pinned tasks, sitting just under the header. */
 export function PinnedNotch({
   entries,
+  collapsed,
+  onToggleCollapsed,
   activeTags,
   activeMentions,
   taskTags,
@@ -34,9 +38,22 @@ export function PinnedNotch({
 }: Props) {
   if (entries.length === 0) return null;
   return (
-    <div className="pin-notch">
-      <div className="pin-notch-inner">
-        {entries.map((e) => (
+    <div className={`pin-notch${collapsed ? " pin-notch-collapsed" : ""}`}>
+      <button
+        className="pin-toggle"
+        onClick={onToggleCollapsed}
+        title={collapsed ? "Expand pinned (Shift+P)" : "Minimize pinned (Shift+P)"}
+        aria-expanded={!collapsed}
+      >
+        <span className="pin-toggle-star">★</span>
+        <span className="pin-toggle-count">
+          {entries.length} pinned
+        </span>
+        <span className="pin-toggle-chev">{collapsed ? "▸" : "▾"}</span>
+      </button>
+      {!collapsed && (
+        <div className="pin-notch-inner">
+          {entries.map((e) => (
           <EntryRow
             key={`pin:${e.id}`}
             entry={e}
@@ -52,8 +69,9 @@ export function PinnedNotch({
             onToggleDone={onToggleDone}
             onTogglePin={onTogglePin}
           />
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
