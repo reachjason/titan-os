@@ -74,6 +74,23 @@ const INLINE_RULES: {
     ),
   },
   {
+    // Bare URL — auto-linkified. Requires a word boundary before it and stops
+    // before trailing punctuation so "see http://x.com, then" links cleanly.
+    re: /(?:^|(?<=\s))(https?:\/\/[^\s]+?)(?=[.,!?;:]*(?:\s|$))/i,
+    render: (m) => (
+      <a
+        key={nextKey()}
+        className="md-link"
+        href={m[1]}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {m[1]}
+      </a>
+    ),
+  },
+  {
     re: /\*\*([^*]+)\*\*/,
     render: (m) => <strong key={nextKey()}>{renderInline(m[1])}</strong>,
   },

@@ -663,6 +663,7 @@ body {
   color: var(--clay);
   text-decoration: underline;
   text-underline-offset: 2px;
+  word-break: break-word;
 }
 .md-link:hover {
   color: var(--clay-deep);
