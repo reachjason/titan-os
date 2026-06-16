@@ -67,7 +67,7 @@ This is also run automatically by CI on every push to `main` (see below).
 Vercel's **Hobby (free)** plan only deploys commits authored by the account owner.
 To make **every push to `main` deploy regardless of author**, we deploy from
 **GitHub Actions** with the Vercel CLI (see `.github/workflows/deploy.yml`). On each
-push to `main`/`master` it:
+push to `main` it:
 1. `npx convex deploy` — ships the Convex backend to prod (`CONVEX_DEPLOY_KEY`).
 2. `vercel build` + `vercel deploy --prebuilt --prod` — builds the frontend against
    the prod `VITE_CONVEX_URL` and ships it to Vercel.

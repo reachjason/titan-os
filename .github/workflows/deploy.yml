@@ -6,7 +6,7 @@ name: Deploy (Convex + Vercel)
 # and ships the frontend to Vercel via the Vercel CLI using a token.
 on:
   push:
-    branches: [main, master]
+    branches: [main]
 
 concurrency:
   group: deploy-${{ github.ref }}
