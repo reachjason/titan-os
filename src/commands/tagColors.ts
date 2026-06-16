@@ -5,6 +5,8 @@ import type { Theme } from "../types";
  * Each entry is [darkBg, darkFg, lightBg, lightFg].
  */
 const PALETTE: Record<string, [string, string, string, string]> = {
+  // /do and /todo are equivalent "task to do" tags — identical color.
+  do: ["#3a2620", "#e0a18b", "#f4dad0", "#a6492e"],
   todo: ["#3a2620", "#e0a18b", "#f4dad0", "#a6492e"],
   note: ["#1f2e38", "#8fbad2", "#d6e3ec", "#3f6b86"],
   idea: ["#332b18", "#cdb16a", "#ede2c4", "#8a6d22"],

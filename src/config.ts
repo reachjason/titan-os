@@ -63,6 +63,7 @@ export const config = {
    * Tags you invent on the fly still work; they just get an auto color.
    */
   commands: [
+    { name: "do", hint: "a task to do", hue: 18 },
     { name: "todo", hint: "a task to do", hue: 18 },
     { name: "idea", hint: "a thought to keep", hue: 40 },
     { name: "note", hint: "a plain note", hue: 200 },
