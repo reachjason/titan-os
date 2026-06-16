@@ -14,10 +14,11 @@ export function parseEntry(raw: string): { tags: string[]; body: string } {
     const tag = m[2].toLowerCase();
     if (!tags.includes(tag)) tags.push(tag);
   }
+  // Keep tags inline in the body so the message reads naturally ("going to
+  // /do this"); they're rendered as chips in place. We only tidy whitespace.
   const body = raw
-    .replace(TAG, "$1") // drop the /tag, keep its leading space
-    .replace(/[ \t]{2,}/g, " ") // collapse runs of spaces/tabs (keep newlines)
-    .replace(/[ \t]*\n[ \t]*/g, "\n") // tidy whitespace around newlines
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/[ \t]*\n[ \t]*/g, "\n")
     .trim();
   return { tags, body };
 }

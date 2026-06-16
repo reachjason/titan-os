@@ -23,6 +23,11 @@ interface Props {
   onTogglePin: (id: string) => void;
 }
 
+/** Does the body contain this tag inline (as "/tag")? */
+function tagInBody(body: string, tag: string): boolean {
+  return new RegExp(`(?:^|\\s)/${tag}(?![a-z0-9_-])`, "i").test(body);
+}
+
 export function EntryRow({
   entry,
   activeTags,
@@ -111,17 +116,25 @@ export function EntryRow({
       )}
 
       <div className="row-line">
+        {/* Leading chips only for tags NOT present inline in the body (e.g.
+            older entries whose stored body had tags stripped). New entries
+            render their /tags inline within the message. */}
         {!hideTags &&
-          entry.tags.map((t) => (
-            <Fragment key={t}>
-              <TagChip tag={t} active={activeTags.includes(t)} onClick={onTagClick} />{" "}
-            </Fragment>
-          ))}
+          entry.tags
+            .filter((t) => !tagInBody(entry.body, t))
+            .map((t) => (
+              <Fragment key={t}>
+                <TagChip tag={t} active={activeTags.includes(t)} onClick={onTagClick} />{" "}
+              </Fragment>
+            ))}
         {entry.body && (
           <span className="row-body">
             {renderMarkdown(entry.body, {
               onMention: onMentionClick,
-              active: activeMentions,
+              activeMentions,
+              onTag: onTagClick,
+              activeTags,
+              hideTags,
             })}
           </span>
         )}

@@ -36,8 +36,9 @@ export function parseEntry(raw: string): { tags: string[]; body: string } {
     const tag = m[2].toLowerCase();
     if (!tags.includes(tag)) tags.push(tag);
   }
+  // Keep /tags inline in the body so the message reads naturally; they're
+  // rendered as chips in place by the client.
   const body = raw
-    .replace(TAG, "$1")
     .replace(/[ \t]{2,}/g, " ")
     .replace(/[ \t]*\n[ \t]*/g, "\n")
     .trim();
@@ -54,30 +55,35 @@ export function retagRaw(raw: string, fromTags: string[], to: string): string {
 interface StatusFields {
   tags: string[];
   raw: string;
+  body: string;
   done: boolean;
 }
 
 /**
- * Compute the tags/raw/done changes for moving an entry to `status`, syncing the
- * /do↔/done tag. Returns only the fields that change so the caller can patch.
+ * Compute the tags/raw/body/done changes for moving an entry to `status`,
+ * syncing the /do↔/done tag (in tags, raw, and the inline body). Returns only
+ * the fields that change so the caller can patch.
  */
 export function applyStatus(
   e: StatusFields,
   status: TaskStatus,
   taskTags: string[]
-): { tags: string[]; raw: string; done: boolean } {
+): { tags: string[]; raw: string; body: string; done: boolean } {
   const wasDone = e.done || e.tags.includes("done");
   let tags = e.tags;
   let raw = e.raw;
+  let body = e.body;
   let done = e.done;
   if (status === "done" && !wasDone) {
     tags = Array.from(new Set(e.tags.map((t) => (taskTags.includes(t) ? "done" : t))));
     raw = retagRaw(e.raw, taskTags, "done");
+    body = retagRaw(e.body, taskTags, "done");
     done = true;
   } else if (status !== "done" && wasDone) {
     tags = Array.from(new Set(e.tags.map((t) => (t === "done" ? "do" : t))));
     raw = retagRaw(e.raw, ["done"], "do");
+    body = retagRaw(e.body, ["done"], "do");
     done = false;
   }
-  return { tags, raw, done };
+  return { tags, raw, body, done };
 }

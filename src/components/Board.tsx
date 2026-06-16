@@ -68,15 +68,24 @@ function Card({
       }}
     >
       <div className="card-body">
-        {entry.body ? renderMarkdown(entry.body) : <span className="card-empty">(empty)</span>}
+        {entry.body ? (
+          renderMarkdown(entry.body, { onTag: onTagClick })
+        ) : (
+          <span className="card-empty">(empty)</span>
+        )}
       </div>
-      {entry.tags.length > 0 && (
-        <div className="card-tags">
-          {entry.tags.map((t) => (
-            <TagChip key={t} tag={t} onClick={onTagClick} />
-          ))}
-        </div>
-      )}
+      {(() => {
+        const orphan = entry.tags.filter(
+          (t) => !new RegExp(`(?:^|\\s)/${t}(?![a-z0-9_-])`, "i").test(entry.body)
+        );
+        return orphan.length > 0 ? (
+          <div className="card-tags">
+            {orphan.map((t) => (
+              <TagChip key={t} tag={t} onClick={onTagClick} />
+            ))}
+          </div>
+        ) : null;
+      })()}
       <div className="card-actions">
         {confirming ? (
           <>

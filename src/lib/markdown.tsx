@@ -1,4 +1,5 @@
 import React from "react";
+import { TagChip } from "../components/TagChip";
 
 /**
  * Tiny, dependency-free Markdown renderer for short log entries.
@@ -14,12 +15,16 @@ function nextKey() {
   return `md-${keySeq++}`;
 }
 
-/** Mention interactivity, set per-render so @mentions can filter like tags. */
-interface MentionOpts {
+/** Interactivity set per-render so inline /tags and @mentions can filter. */
+interface RenderOpts {
   onMention?: (name: string) => void;
-  active?: string[];
+  activeMentions?: string[];
+  onTag?: (tag: string) => void;
+  activeTags?: string[];
+  /** Render /tags as plain text (when the "show tags" pref is off). */
+  hideTags?: boolean;
 }
-let mentionOpts: MentionOpts = {};
+let opts: RenderOpts = {};
 
 // Inline rules, applied in order. Each captures its inner content for recursion
 // (except code + link, which are terminal).
@@ -38,8 +43,8 @@ const INLINE_RULES: {
     re: /(?:^|(?<=\s))@([a-z0-9][a-z0-9_-]*)/i,
     render: (m) => {
       const name = m[1];
-      const { onMention, active } = mentionOpts;
-      const isActive = !!active?.some((n) => n.toLowerCase() === name.toLowerCase());
+      const { onMention, activeMentions } = opts;
+      const isActive = !!activeMentions?.some((n) => n.toLowerCase() === name.toLowerCase());
       const cls = `mention${isActive ? " mention-active" : ""}`;
       if (!onMention) {
         return (
@@ -61,6 +66,23 @@ const INLINE_RULES: {
         >
           @{name}
         </button>
+      );
+    },
+  },
+  {
+    // /tag — clickable + filterable, rendered inline so it stays in the message.
+    // Requires a word boundary before "/" so URL paths (a/b) aren't matched.
+    re: /(?:^|(?<=\s))\/([a-z0-9][a-z0-9_-]*)/i,
+    render: (m) => {
+      const name = m[1].toLowerCase();
+      if (opts.hideTags) return `/${m[1]}`;
+      return (
+        <TagChip
+          key={nextKey()}
+          tag={name}
+          active={opts.activeTags?.some((t) => t.toLowerCase() === name)}
+          onClick={opts.onTag}
+        />
       );
     },
   },
@@ -130,8 +152,8 @@ function renderInline(text: string): React.ReactNode[] {
  * Render block-level markdown (paragraphs, bullet lists, line breaks) for an
  * entry body. Returns React nodes suitable for placement inside a text span.
  */
-export function renderMarkdown(text: string, opts: MentionOpts = {}): React.ReactNode {
-  mentionOpts = opts;
+export function renderMarkdown(text: string, renderOpts: RenderOpts = {}): React.ReactNode {
+  opts = renderOpts;
   const lines = text.split("\n");
   const blocks: React.ReactNode[] = [];
   let list: React.ReactNode[] | null = null;
