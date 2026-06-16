@@ -21,8 +21,10 @@ interface Props {
 
 interface CardProps {
   entry: Entry;
+  dragging: boolean;
   onDragStart: () => void;
   onDragEnd: () => void;
+  onDragOver: () => void;
   onDropBefore: () => void;
   onTogglePin: (id: string) => void;
   onDelete: (id: string) => void;
@@ -31,8 +33,10 @@ interface CardProps {
 
 function Card({
   entry,
+  dragging,
   onDragStart,
   onDragEnd,
+  onDragOver,
   onDropBefore,
   onTogglePin,
   onDelete,
@@ -43,15 +47,23 @@ function Card({
 
   return (
     <div
-      className={`card${done ? " card-done" : ""}${entry.pinned ? " card-pinned" : ""}`}
+      className={`card${done ? " card-done" : ""}${entry.pinned ? " card-pinned" : ""}${
+        dragging ? " card-dragging" : ""
+      }`}
       draggable
       onDragStart={(e) => {
         e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", entry.id);
         onDragStart();
       }}
       onDragEnd={onDragEnd}
-      onDragOver={(e) => e.preventDefault()}
+      onDragOver={(e) => {
+        // Keep the column highlighted and signal an insert-before drop here.
+        e.preventDefault();
+        onDragOver();
+      }}
       onDrop={(e) => {
+        e.preventDefault();
         e.stopPropagation();
         onDropBefore();
       }}
@@ -130,15 +142,29 @@ export function Board({ entries, taskTags, onMove, onTogglePin, onDelete, onTagC
           <div
             key={col.key}
             className={`column${overCol === col.key ? " column-over" : ""}`}
-            onDragOver={(e) => {
-              e.preventDefault();
-              setOverCol(col.key);
+            onDragEnter={() => {
+              if (draggingId) setOverCol(col.key);
             }}
-            onDragLeave={() => setOverCol((c) => (c === col.key ? null : c))}
-            onDrop={() => drop(col.key, orderEnd(list))}
+            onDragOver={(e) => {
+              // Allow drops anywhere in the column (incl. the empty area below cards).
+              e.preventDefault();
+              e.dataTransfer.dropEffect = "move";
+              if (draggingId && overCol !== col.key) setOverCol(col.key);
+            }}
+            onDragLeave={(e) => {
+              // Only clear when the cursor actually leaves the column, not when it
+              // crosses between the column's own children (cards / body).
+              if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                setOverCol((c) => (c === col.key ? null : c));
+              }
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              drop(col.key, orderEnd(list));
+            }}
           >
             <div className="column-head">
-              {col.label}
+              <span className="column-title">{col.label}</span>
               <span className="column-count">{list.length}</span>
             </div>
             <div className="column-body">
@@ -146,10 +172,14 @@ export function Board({ entries, taskTags, onMove, onTogglePin, onDelete, onTagC
                 <Card
                   key={e.id}
                   entry={e}
+                  dragging={draggingId === e.id}
                   onDragStart={() => setDraggingId(e.id)}
                   onDragEnd={() => {
                     setDraggingId(null);
                     setOverCol(null);
+                  }}
+                  onDragOver={() => {
+                    if (draggingId && overCol !== col.key) setOverCol(col.key);
                   }}
                   onDropBefore={() => drop(col.key, orderBefore(list, e))}
                   onTogglePin={onTogglePin}

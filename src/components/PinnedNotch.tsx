@@ -33,22 +33,24 @@ export function PinnedNotch({
   if (entries.length === 0) return null;
   return (
     <div className="pin-notch">
-      {entries.map((e) => (
-        <EntryRow
-          key={`pin:${e.id}`}
-          entry={e}
-          query={query}
-          activeTags={activeTags}
-          checkable={isTask(e.tags, taskTags) || !!e.done}
-          showTime={showTime}
-          hideTags={!showTags}
-          onTagClick={onTagClick}
-          onEdit={onEdit}
-          onDelete={onDelete}
-          onToggleDone={onToggleDone}
-          onTogglePin={onTogglePin}
-        />
-      ))}
+      <div className="pin-notch-inner">
+        {entries.map((e) => (
+          <EntryRow
+            key={`pin:${e.id}`}
+            entry={e}
+            query={query}
+            activeTags={activeTags}
+            checkable={isTask(e.tags, taskTags) || !!e.done}
+            showTime={showTime}
+            hideTags={!showTags}
+            onTagClick={onTagClick}
+            onEdit={onEdit}
+            onDelete={onDelete}
+            onToggleDone={onToggleDone}
+            onTogglePin={onTogglePin}
+          />
+        ))}
+      </div>
     </div>
   );
 }

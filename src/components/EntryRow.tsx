@@ -117,7 +117,7 @@ export function EntryRow({
           aria-pressed={done}
           aria-label={done ? "Completed" : "Mark done"}
         >
-          {done ? "✓" : ""}
+          {done && <span className="check-tick">✓</span>}
         </button>
       ) : (
         <span className="bullet" aria-hidden="true" />

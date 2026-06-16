@@ -16,21 +16,37 @@ export interface CommandDef {
 }
 
 export interface ThemeTokens {
+  /** Page background. */
   bg: string;
+  /** Raised surfaces — modals, popovers, cards, capture bar, pills. */
   bgRaised: string;
+  /** Recessed surfaces — hovered rows, faint fills. */
   bgSunk: string;
+  /** Primary text. */
   ink: string;
+  /** Secondary text — wordmark, toggles, labels. */
   inkSoft: string;
+  /** Faint text — timestamps, hints, the "off" toolbar glyphs. */
   inkFaint: string;
+  /** Accent (coral / terracotta). */
   clay: string;
+  /** Accent, deeper — hover / pressed. */
   clayDeep: string;
+  /** Hairline borders. */
   line: string;
+  /** Search highlight background. */
   mark: string;
+  /** Note bullet dot + unchecked checkbox border. */
+  dot: string;
+  /** Modal / popover scrim. */
+  scrim: string;
+  /** Box shadow for raised surfaces. */
   shadow: string;
-  /** Chip lightness knobs (CSS % values) — tune chip contrast per theme. */
-  chipL: string;
-  chipTextL: string;
-  chipBorderL: string;
+  /** Stronger shadow for modals / Spotlight. */
+  shadowStrong: string;
+  /** Toast background + text (inverted). */
+  toastBg: string;
+  toastInk: string;
 }
 
 export const config = {
@@ -40,6 +56,13 @@ export const config = {
     tagline: "work inbox",
     /** Glyph shown before the name. Any emoji/char works. */
     mark: "◐",
+  },
+
+  /** Signed-in user shown in the account popover (demo / front-end only). */
+  account: {
+    initial: "A",
+    email: "alex@titan.os",
+    subtitle: "Signed in with Google",
   },
 
   /**
@@ -67,19 +90,19 @@ export const config = {
     autoScroll: true,
   },
 
-  /** Keyboard shortcuts (KeyboardEvent.key values; focusSearch uses ⌘/Ctrl). */
+  /** Keyboard shortcuts (KeyboardEvent.key values; search uses Shift). */
   shortcuts: {
     /** Focus the terminal/log bar from anywhere. */
     focusBar: "/",
-    /** Focus the search box (with ⌘ on macOS / Ctrl elsewhere). */
-    focusSearch: "k",
-    /** Cycle sort/group mode: newest-bottom → newest-top → by-tag. */
-    cycleSort: "s",
+    /** Open the Spotlight search palette (with Shift, i.e. Shift+F). */
+    search: "f",
+    /** Switch between list and board view. */
+    toggleView: "v",
     /** Toggle focus mode (pinned tasks only). */
-    focusMode: "f",
+    focusMode: "p",
     /** Open the keyboard-shortcut help modal. */
     help: "?",
-    /** Clear active tag + search filters / close modals. */
+    /** Clear active tag filters / close modals. */
     clearFilters: "Escape",
   },
 
@@ -109,36 +132,40 @@ export const config = {
    */
   theme: {
     light: {
-      bg: "#f4f1ea",
-      bgRaised: "#fbf9f3",
-      bgSunk: "#ece7db",
-      ink: "#2b2722",
+      bg: "#f3eee4",
+      bgRaised: "#ffffff",
+      bgSunk: "#eae3d6",
+      ink: "#2a2521",
       inkSoft: "#6b6358",
-      inkFaint: "#9a9082",
-      clay: "#cc785c",
-      clayDeep: "#b15c40",
-      line: "#e1dacb",
-      mark: "#f4d9a0",
-      shadow: "0 1px 2px rgba(43,39,34,.06), 0 8px 24px rgba(43,39,34,.05)",
-      chipL: "92%",
-      chipTextL: "32%",
-      chipBorderL: "78%",
+      inkFaint: "#a39a8c",
+      clay: "#c8674a",
+      clayDeep: "#a8523a",
+      line: "#e2dacd",
+      mark: "#f1d9bf",
+      dot: "#c9bfae",
+      scrim: "rgba(40,30,20,.28)",
+      shadow: "0 1px 2px rgba(40,30,20,.06), 0 12px 32px rgba(40,30,20,.10)",
+      shadowStrong: "0 24px 60px rgba(40,30,20,.30)",
+      toastBg: "#2a2521",
+      toastInk: "#f3ece1",
     } as ThemeTokens,
     dark: {
-      bg: "#1c1a17",
-      bgRaised: "#26231f",
-      bgSunk: "#161412",
-      ink: "#ede7dc",
-      inkSoft: "#b3a99a",
-      inkFaint: "#7d7466",
-      clay: "#e08a6c",
+      bg: "#171311",
+      bgRaised: "#211c18",
+      bgSunk: "#1c1814",
+      ink: "#f3ece1",
+      inkSoft: "#b8ae9f",
+      inkFaint: "#6f665b",
+      clay: "#e08a6b",
       clayDeep: "#cc785c",
-      line: "#353029",
-      mark: "#6b531f",
-      shadow: "0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25)",
-      chipL: "24%",
-      chipTextL: "78%",
-      chipBorderL: "36%",
+      line: "#2c2621",
+      mark: "#4a3a26",
+      dot: "#5a5147",
+      scrim: "rgba(10,8,6,.62)",
+      shadow: "0 1px 2px rgba(0,0,0,.4), 0 12px 32px rgba(0,0,0,.4)",
+      shadowStrong: "0 24px 60px rgba(0,0,0,.55)",
+      toastBg: "#f3ece1",
+      toastInk: "#2a2521",
     } as ThemeTokens,
   },
 };

@@ -126,13 +126,21 @@ export function Feed(props: Props) {
   }
 
   if (entries.length === 0) {
+    if (filtering) {
+      return (
+        <div className="feed feed-empty">
+          <p>Nothing matches that filter.</p>
+        </div>
+      );
+    }
     return (
-      <div className="feed feed-empty">
-        <p>
-          {filtering
-            ? "Nothing matches that filter."
-            : "Nothing here yet. Capture a task below — try “/do ship the deck”."}
-        </p>
+      <div className="feed feed-firstrun">
+        <span className="firstrun-mark" aria-hidden="true" />
+        <span className="firstrun-title">Your log is empty.</span>
+        <span className="firstrun-sub">
+          Type your first thought below — add a <code className="firstrun-tag">/tag</code> to label
+          it.
+        </span>
       </div>
     );
   }

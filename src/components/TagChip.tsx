@@ -1,4 +1,5 @@
-import { hueForTag } from "../commands/registry";
+import { chipColor } from "../commands/tagColors";
+import { useCurrentTheme } from "../store/ThemeContext";
 
 interface Props {
   tag: string;
@@ -7,9 +8,11 @@ interface Props {
 }
 
 export function TagChip({ tag, active, onClick }: Props) {
-  const hue = hueForTag(tag);
+  const theme = useCurrentTheme();
+  const { bg, fg } = chipColor(tag, theme);
   const style = {
-    "--chip-hue": hue,
+    background: bg,
+    color: fg,
   } as React.CSSProperties;
 
   return (

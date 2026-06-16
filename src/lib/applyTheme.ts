@@ -13,10 +13,12 @@ const VAR_MAP: Record<keyof typeof config.theme.light, string> = {
   clayDeep: "--clay-deep",
   line: "--line",
   mark: "--mark",
+  dot: "--dot",
+  scrim: "--scrim",
   shadow: "--shadow",
-  chipL: "--chip-l",
-  chipTextL: "--chip-text-l",
-  chipBorderL: "--chip-border-l",
+  shadowStrong: "--shadow-strong",
+  toastBg: "--toast-bg",
+  toastInk: "--toast-ink",
 };
 
 /** Write a theme's tokens onto :root so the whole UI re-skins instantly. */

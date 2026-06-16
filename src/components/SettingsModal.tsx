@@ -70,7 +70,7 @@ export function SettingsModal({
       >
         <div className="modal-head">
           <h2 className="modal-title">Settings</h2>
-          <button className="icon-btn" onClick={onClose} aria-label="Close">
+          <button className="modal-close" onClick={onClose} aria-label="Close">
             ✕
           </button>
         </div>
@@ -86,7 +86,9 @@ export function SettingsModal({
         <div className="set-row">
           <div className="set-label">
             Show timestamps
-            <span className="set-sub">Faint time on each row. (t c)</span>
+            <span className="set-sub">
+              Faint time on each row. <code>t c</code>
+            </span>
           </div>
           <Toggle on={prefs.showTimestamps} onClick={onToggleTimestamps} />
         </div>
@@ -94,7 +96,9 @@ export function SettingsModal({
         <div className="set-row">
           <div className="set-label">
             Show tags
-            <span className="set-sub">Tag chips on each row. (t t)</span>
+            <span className="set-sub">
+              Tag chips on each row. <code>t t</code>
+            </span>
           </div>
           <Toggle on={prefs.showTags} onClick={onToggleTags} />
         </div>
@@ -115,8 +119,6 @@ export function SettingsModal({
                 /{t} <span className="tasktag-x">✕</span>
               </button>
             ))}
-          </div>
-          <div className="tasktag-add">
             <input
               list="known-tags"
               className="tasktag-input"
@@ -140,8 +142,6 @@ export function SettingsModal({
             </button>
           </div>
         </div>
-
-        <div className="set-divider" />
 
         <div className="set-actions">
           <button className="ghost-btn" onClick={onExport}>

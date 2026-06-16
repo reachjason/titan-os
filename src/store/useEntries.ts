@@ -29,19 +29,51 @@ function applyStatus(e: Entry, status: TaskStatus, taskTags: string[]): Entry {
   return { ...e, status, tags, raw, done };
 }
 
+function makeId(): string {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+/** Example entries shown on a genuine first run, so the app opens populated. */
+function seed(): Entry[] {
+  const base = new Date();
+  base.setHours(8, 42, 0, 0);
+  const t0 = base.getTime();
+  const rows: { raw: string; done?: boolean; status?: TaskStatus }[] = [
+    { raw: "/todo create a proposal for chiliz", status: "todo" },
+    { raw: "/note plot points in time of news in backtested graphs" },
+    { raw: "/idea newsletter for cesto community" },
+    { raw: "/urgent check colosseum competition" },
+    { raw: "/followup superteam black status" },
+    { raw: "/done coffee", done: true, status: "done" },
+  ];
+  return rows.map((r, i) => {
+    const ts = t0 + i * 60000;
+    const { tags, body } = parseEntry(r.raw);
+    return {
+      id: `seed-${i}`,
+      raw: r.raw,
+      body,
+      tags,
+      createdAt: ts,
+      updatedAt: ts,
+      edited: false,
+      done: !!r.done,
+      pinned: false,
+      status: r.status ?? "todo",
+      order: ts,
+    };
+  });
+}
+
 function load(): Entry[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
+    if (raw === null) return seed(); // genuine first run → populated demo
     const parsed = JSON.parse(raw) as Entry[];
     return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
   }
-}
-
-function makeId(): string {
-  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 export function useEntries() {

@@ -5,16 +5,18 @@ interface Props {
 }
 
 const SHORTCUTS: { keys: string[]; label: string }[] = [
-  { keys: ["⌘", "K"], label: "Search" },
-  { keys: ["/"], label: "Focus the log bar" },
-  { keys: ["F"], label: "Focus mode — pinned only" },
-  { keys: ["T", "C"], label: "Toggle timestamps" },
-  { keys: ["T", "T"], label: "Toggle tags" },
-  { keys: ["?"], label: "Show this help" },
-  { keys: ["Esc"], label: "Clear filters · cancel · close" },
-  { keys: ["Enter"], label: "Log the entry  ·  Shift+Enter newline" },
-  { keys: ["↑", "↓"], label: "Previous / next entry (in the log bar)" },
-  { keys: ["click tag"], label: "Filter — click more tags to combine" },
+  { keys: ["↵"], label: "Log & clear" },
+  { keys: ["/"], label: "Open tag menu" },
+  { keys: ["⇧F"], label: "Spotlight search" },
+  { keys: ["esc"], label: "Dismiss / close" },
+  { keys: ["v"], label: "List / Board" },
+  { keys: ["p"], label: "Focus pinned" },
+  { keys: ["t", "c"], label: "Toggle timestamps" },
+  { keys: ["t", "t"], label: "Toggle tags" },
+  { keys: ["click ☑"], label: "Complete task" },
+  { keys: ["click"], label: "Move board card" },
+  { keys: ["↑", "↓"], label: "History (log bar)" },
+  { keys: ["?"], label: "This sheet" },
 ];
 
 export function HelpModal({ onClose }: Props) {
@@ -27,26 +29,34 @@ export function HelpModal({ onClose }: Props) {
   }, [onClose]);
 
   return (
-    <div className="modal-overlay" onMouseDown={onClose}>
-      <div className="modal" role="dialog" aria-label="Keyboard shortcuts" onMouseDown={(e) => e.stopPropagation()}>
+    <div className="modal-overlay modal-overlay-centered" onMouseDown={onClose}>
+      <div
+        className="modal modal-wide"
+        role="dialog"
+        aria-label="Keyboard shortcuts"
+        onMouseDown={(e) => e.stopPropagation()}
+      >
         <div className="modal-head">
           <h2 className="modal-title">Keyboard shortcuts</h2>
-          <button className="icon-btn" onClick={onClose} aria-label="Close">
+          <button className="modal-close" onClick={onClose} aria-label="Close">
             ✕
           </button>
         </div>
-        <ul className="shortcut-list">
+        <div className="shortcut-grid">
           {SHORTCUTS.map((s) => (
-            <li key={s.label} className="shortcut-row">
-              <span className="shortcut-keys">
-                {s.keys.map((k) => (
-                  <kbd key={k}>{k}</kbd>
+            <div key={s.label} className="shortcut-row">
+              <span className="shortcut-label">{s.label}</span>
+              <span>
+                {s.keys.map((k, i) => (
+                  <kbd key={i}>{k}</kbd>
                 ))}
               </span>
-              <span className="shortcut-label">{s.label}</span>
-            </li>
+            </div>
           ))}
-        </ul>
+        </div>
+        <div className="shortcut-foot">
+          press <span className="spot-key">?</span> anytime · esc to close
+        </div>
       </div>
     </div>
   );

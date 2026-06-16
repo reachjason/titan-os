@@ -1,5 +1,7 @@
 import { forwardRef, useImperativeHandle, useRef, useState } from "react";
-import { COMMANDS } from "../commands/registry";
+import { COMMANDS, getCommand } from "../commands/registry";
+import { chipColor } from "../commands/tagColors";
+import { useCurrentTheme } from "../store/ThemeContext";
 import { activeTagFragment } from "../lib/parse";
 import { config } from "../config";
 
@@ -17,6 +19,7 @@ export interface TerminalBarHandle {
 
 export const TerminalBar = forwardRef<TerminalBarHandle, Props>(
   ({ onSubmit, knownTags, history }, ref) => {
+    const theme = useCurrentTheme();
     const [value, setValue] = useState("");
     const [sel, setSel] = useState(0);
     const [histPos, setHistPos] = useState(0);
@@ -73,23 +76,30 @@ export const TerminalBar = forwardRef<TerminalBarHandle, Props>(
       <div className="terminal-wrap">
         {suggestions.length > 0 && (
           <ul className="suggest">
-            {suggestions.map((t, i) => (
-              <li
-                key={t}
-                className={i === sel ? "suggest-active" : ""}
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  applySuggestion(t);
-                }}
-              >
-                <span className="chip-slash">/</span>
-                {t}
-              </li>
-            ))}
+            {suggestions.map((t, i) => {
+              const c = chipColor(t, theme);
+              const hint = getCommand(t)?.hint ?? "custom tag";
+              return (
+                <li
+                  key={t}
+                  className={i === sel ? "suggest-active" : ""}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    applySuggestion(t);
+                  }}
+                >
+                  <span className="chip" style={{ background: c.bg, color: c.fg }}>
+                    <span className="chip-slash">/</span>
+                    {t}
+                  </span>
+                  <span className="suggest-hint">{hint}</span>
+                </li>
+              );
+            })}
           </ul>
         )}
         <div className="terminal-bar">
-          <span className="prompt-glyph">›</span>
+          <span className="prompt-glyph">&gt;</span>
           <textarea
             ref={inputRef}
             className="terminal-input"
@@ -120,6 +130,10 @@ export const TerminalBar = forwardRef<TerminalBarHandle, Props>(
                 // caret at very end → recall newer entry
                 e.preventDefault();
                 recall(histPos - 1);
+              } else if (e.key === "Tab" && suggestions.length > 0) {
+                // Tab completes the highlighted tag (without leaving the bar).
+                e.preventDefault();
+                applySuggestion(suggestions[sel]);
               } else if (e.key === "Enter" && !e.shiftKey) {
                 // Enter submits; Shift+Enter inserts a newline (default).
                 e.preventDefault();
