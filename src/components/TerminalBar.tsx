@@ -48,7 +48,9 @@ export const TerminalBar = forwardRef<TerminalBarHandle, Props>(
     const tagSuggestions =
       tagFragment !== null
         ? Array.from(new Set([...COMMANDS.map((c) => c.name), ...knownTags]))
-            .filter((t) => t.startsWith(tagFragment) && t !== tagFragment)
+            // "done" is applied automatically when a task is checked, not typed,
+            // so don't suggest it (typing /do should never offer only /done).
+            .filter((t) => t !== "done" && t.startsWith(tagFragment) && t !== tagFragment)
             .slice(0, 6)
         : [];
 
