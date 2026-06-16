@@ -12,12 +12,14 @@ interface Props {
   entries: Entry[];
   sort: SortMode;
   activeTags: string[];
+  activeMentions: string[];
   filtering: boolean;
   focus: boolean;
   taskTags: string[];
   showTime: boolean;
   showTags: boolean;
   onTagClick: (tag: string) => void;
+  onMentionClick: (name: string) => void;
   onEdit: (id: string, raw: string) => void;
   onDelete: (id: string) => void;
   onToggleDone: (id: string) => void;
@@ -63,12 +65,14 @@ export function Feed(props: Props) {
     entries,
     sort,
     activeTags,
+    activeMentions,
     filtering,
     focus,
     taskTags,
     showTime,
     showTags,
     onTagClick,
+    onMentionClick,
     onEdit,
     onDelete,
     onToggleDone,
@@ -97,10 +101,12 @@ export function Feed(props: Props) {
     <EntryRow
       entry={entry}
       activeTags={activeTags}
+      activeMentions={activeMentions}
       checkable={isTask(entry.tags, taskTags) || !!entry.done}
       showTime={minimal ? false : showTime}
       hideTags={!showTags}
       onTagClick={onTagClick}
+      onMentionClick={onMentionClick}
       onEdit={onEdit}
       onDelete={onDelete}
       onToggleDone={onToggleDone}

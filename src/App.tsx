@@ -65,6 +65,7 @@ function Workspace() {
   const avatarInitial = (currentUser?.name || currentUser?.email || "?")[0].toUpperCase();
   const [filter, setFilter] = useState<FilterState>(() => ({
     tags: [],
+    mentions: [],
     match: loadView()?.match ?? "any",
     query: "",
   }));
@@ -103,18 +104,22 @@ function Workspace() {
   const pinned = useMemo(() => entries.filter((e) => e.pinned), [entries]);
 
   const filtered = useMemo(() => {
-    // Tag filter only — free-text search now lives in the Spotlight palette.
+    // Tag + @mention filters (free-text search lives in the Spotlight palette).
     return entries.filter((e) => {
-      return (
+      const tagOk =
         filter.tags.length === 0 ||
         (filter.match === "all"
           ? filter.tags.every((t) => e.tags.includes(t))
-          : filter.tags.some((t) => e.tags.includes(t)))
-      );
+          : filter.tags.some((t) => e.tags.includes(t)));
+      const body = e.body.toLowerCase();
+      const mentionOk =
+        filter.mentions.length === 0 ||
+        filter.mentions.some((n) => body.includes(`@${n.toLowerCase()}`));
+      return tagOk && mentionOk;
     });
   }, [entries, filter]);
 
-  const filtering = filter.tags.length > 0;
+  const filtering = filter.tags.length > 0 || filter.mentions.length > 0;
 
   const toggleTag = (tag: string) =>
     setFilter((f) => ({
@@ -122,7 +127,15 @@ function Workspace() {
       tags: f.tags.includes(tag) ? f.tags.filter((t) => t !== tag) : [...f.tags, tag],
     }));
 
-  const clearFilters = () => setFilter({ tags: [], match: filter.match, query: "" });
+  const toggleMention = (name: string) =>
+    setFilter((f) => ({
+      ...f,
+      mentions: f.mentions.includes(name)
+        ? f.mentions.filter((n) => n !== name)
+        : [...f.mentions, name],
+    }));
+
+  const clearFilters = () => setFilter({ tags: [], mentions: [], match: filter.match, query: "" });
   const toggleMatch = () =>
     setFilter((f) => ({ ...f, match: f.match === "any" ? "all" : "any" }));
 
@@ -384,11 +397,21 @@ function Workspace() {
           />
         </header>
 
-        {filter.tags.length > 0 && (
+        {filtering && (
           <div className="filter-bar">
             <span className="filter-label">Filtering</span>
             {filter.tags.map((t) => (
               <TagChip key={t} tag={t} active onClick={toggleTag} />
+            ))}
+            {filter.mentions.map((n) => (
+              <button
+                key={`@${n}`}
+                className="mention mention-active"
+                onClick={() => toggleMention(n)}
+                title={`Remove @${n} filter`}
+              >
+                @{n}
+              </button>
             ))}
             {filter.tags.length > 1 && (
               <button
@@ -421,10 +444,12 @@ function Workspace() {
               <PinnedNotch
                 entries={pinned}
                 activeTags={filter.tags}
+                activeMentions={filter.mentions}
                 taskTags={prefs.taskTags}
                 showTime={prefs.showTimestamps}
                 showTags={prefs.showTags}
                 onTagClick={toggleTag}
+                onMentionClick={toggleMention}
                 onEdit={update}
                 onDelete={remove}
                 onToggleDone={(id) => toggleDone(id, prefs.taskTags)}
@@ -437,12 +462,14 @@ function Workspace() {
                 entries={focus ? entries : filtered}
                 sort={sort}
                 activeTags={filter.tags}
+                activeMentions={filter.mentions}
                 filtering={filtering}
                 focus={focus}
                 taskTags={prefs.taskTags}
                 showTime={prefs.showTimestamps}
                 showTags={prefs.showTags}
                 onTagClick={toggleTag}
+                onMentionClick={toggleMention}
                 onEdit={update}
                 onDelete={remove}
                 onToggleDone={(id) => toggleDone(id, prefs.taskTags)}

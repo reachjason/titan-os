@@ -671,6 +671,31 @@ body {
   font-weight: 600;
   color: var(--clay);
 }
+/* Clickable mention (button) — filters like a tag */
+button.mention {
+  font: inherit;
+  font-weight: 600;
+  color: var(--clay);
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  border-radius: 4px;
+}
+button.mention:hover {
+  text-decoration: underline;
+}
+.mention-active {
+  background: color-mix(in srgb, var(--clay) 18%, transparent);
+  padding: 0 4px;
+  border-radius: 5px;
+}
+/* In the filter bar, the active mention reads as a removable chip */
+.filter-bar .mention {
+  padding: 1px 9px;
+  background: color-mix(in srgb, var(--clay) 16%, transparent);
+  border-radius: 999px;
+}
 .md-list {
   margin: 2px 0 2px;
   padding-left: 1.25em;

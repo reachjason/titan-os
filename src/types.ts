@@ -49,6 +49,8 @@ export type SortMode = "asc" | "desc" | "tag" | "manual";
 export interface FilterState {
   /** Active tag filters. Empty = no tag filter. */
   tags: string[];
+  /** Active @mention (person) filters, by name. Empty = no mention filter. */
+  mentions: string[];
   /** How multiple tag filters combine: "any" = OR, "all" = AND. */
   match: "any" | "all";
   /** Free-text search query. */

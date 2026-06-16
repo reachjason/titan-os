@@ -13,7 +13,10 @@ interface Props {
   showTime: boolean;
   /** Hide tag chips (used in focus mode for a clean view). */
   hideTags?: boolean;
+  /** Active @mention filters, for highlighting. */
+  activeMentions: string[];
   onTagClick: (tag: string) => void;
+  onMentionClick: (name: string) => void;
   onEdit: (id: string, raw: string) => void;
   onDelete: (id: string) => void;
   onToggleDone: (id: string) => void;
@@ -26,7 +29,9 @@ export function EntryRow({
   checkable,
   showTime,
   hideTags,
+  activeMentions,
   onTagClick,
+  onMentionClick,
   onEdit,
   onDelete,
   onToggleDone,
@@ -112,7 +117,14 @@ export function EntryRow({
               <TagChip tag={t} active={activeTags.includes(t)} onClick={onTagClick} />{" "}
             </Fragment>
           ))}
-        {entry.body && <span className="row-body">{renderMarkdown(entry.body)}</span>}
+        {entry.body && (
+          <span className="row-body">
+            {renderMarkdown(entry.body, {
+              onMention: onMentionClick,
+              active: activeMentions,
+            })}
+          </span>
+        )}
         {entry.edited && (
           <span className="edited-flag" title="edited">
             {" "}

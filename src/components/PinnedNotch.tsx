@@ -5,10 +5,12 @@ import { isTask } from "../store/usePrefs";
 interface Props {
   entries: Entry[];
   activeTags: string[];
+  activeMentions: string[];
   taskTags: string[];
   showTime: boolean;
   showTags: boolean;
   onTagClick: (tag: string) => void;
+  onMentionClick: (name: string) => void;
   onEdit: (id: string, raw: string) => void;
   onDelete: (id: string) => void;
   onToggleDone: (id: string) => void;
@@ -19,10 +21,12 @@ interface Props {
 export function PinnedNotch({
   entries,
   activeTags,
+  activeMentions,
   taskTags,
   showTime,
   showTags,
   onTagClick,
+  onMentionClick,
   onEdit,
   onDelete,
   onToggleDone,
@@ -37,10 +41,12 @@ export function PinnedNotch({
             key={`pin:${e.id}`}
             entry={e}
             activeTags={activeTags}
+            activeMentions={activeMentions}
             checkable={isTask(e.tags, taskTags) || !!e.done}
             showTime={showTime}
             hideTags={!showTags}
             onTagClick={onTagClick}
+            onMentionClick={onMentionClick}
             onEdit={onEdit}
             onDelete={onDelete}
             onToggleDone={onToggleDone}

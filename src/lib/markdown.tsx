@@ -14,6 +14,13 @@ function nextKey() {
   return `md-${keySeq++}`;
 }
 
+/** Mention interactivity, set per-render so @mentions can filter like tags. */
+interface MentionOpts {
+  onMention?: (name: string) => void;
+  active?: string[];
+}
+let mentionOpts: MentionOpts = {};
+
 // Inline rules, applied in order. Each captures its inner content for recursion
 // (except code + link, which are terminal).
 const INLINE_RULES: {
@@ -26,14 +33,36 @@ const INLINE_RULES: {
     render: (m) => <code key={nextKey()} className="md-code">{m[1]}</code>,
   },
   {
-    // @mention — highlighted; keeps the "@" so it reads as a tag. Requires a
-    // word boundary before "@" so emails (a@b.com) aren't matched.
+    // @mention — clickable + filterable like a tag. Requires a word boundary
+    // before "@" so emails (a@b.com) aren't matched.
     re: /(?:^|(?<=\s))@([a-z0-9][a-z0-9_-]*)/i,
-    render: (m) => (
-      <span key={nextKey()} className="mention">
-        @{m[1]}
-      </span>
-    ),
+    render: (m) => {
+      const name = m[1];
+      const { onMention, active } = mentionOpts;
+      const isActive = !!active?.some((n) => n.toLowerCase() === name.toLowerCase());
+      const cls = `mention${isActive ? " mention-active" : ""}`;
+      if (!onMention) {
+        return (
+          <span key={nextKey()} className={cls}>
+            @{name}
+          </span>
+        );
+      }
+      return (
+        <button
+          key={nextKey()}
+          type="button"
+          className={cls}
+          title={`Filter by @${name}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            onMention(name);
+          }}
+        >
+          @{name}
+        </button>
+      );
+    },
   },
   {
     // [text](url) — only http(s)/mailto links are linkified; others stay literal
@@ -84,7 +113,8 @@ function renderInline(text: string): React.ReactNode[] {
  * Render block-level markdown (paragraphs, bullet lists, line breaks) for an
  * entry body. Returns React nodes suitable for placement inside a text span.
  */
-export function renderMarkdown(text: string): React.ReactNode {
+export function renderMarkdown(text: string, opts: MentionOpts = {}): React.ReactNode {
+  mentionOpts = opts;
   const lines = text.split("\n");
   const blocks: React.ReactNode[] = [];
   let list: React.ReactNode[] | null = null;
