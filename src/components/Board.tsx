@@ -3,6 +3,7 @@ import type { Entry, TaskStatus } from "../types";
 import { statusOf, orderOf } from "../lib/tasks";
 import { isTask } from "../store/usePrefs";
 import { TagChip } from "./TagChip";
+import { renderMarkdown } from "../lib/markdown";
 
 const COLUMNS: { key: TaskStatus; label: string }[] = [
   { key: "todo", label: "To Do" },
@@ -68,7 +69,9 @@ function Card({
         onDropBefore();
       }}
     >
-      <div className="card-body">{entry.body || <span className="card-empty">(empty)</span>}</div>
+      <div className="card-body">
+        {entry.body ? renderMarkdown(entry.body) : <span className="card-empty">(empty)</span>}
+      </div>
       {entry.tags.length > 0 && (
         <div className="card-tags">
           {entry.tags.map((t) => (

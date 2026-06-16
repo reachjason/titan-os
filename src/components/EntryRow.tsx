@@ -2,11 +2,11 @@ import { Fragment, useEffect, useRef, useState } from "react";
 import type { Entry } from "../types";
 import { TagChip } from "./TagChip";
 import { timeLabel } from "../lib/dates";
+import { renderMarkdown } from "../lib/markdown";
 import { config } from "../config";
 
 interface Props {
   entry: Entry;
-  query: string;
   activeTags: string[];
   /** This entry carries a task tag → show a checkbox. */
   checkable: boolean;
@@ -20,26 +20,8 @@ interface Props {
   onTogglePin: (id: string) => void;
 }
 
-/** Split text on a case-insensitive query and wrap matches in <mark>. */
-function highlight(text: string, query: string) {
-  const q = query.trim().replace(/^\//, "");
-  if (!q) return text;
-  const parts: React.ReactNode[] = [];
-  let i = 0;
-  let from = text.toLowerCase().indexOf(q.toLowerCase());
-  while (from !== -1) {
-    parts.push(text.slice(i, from));
-    parts.push(<mark key={i}>{text.slice(from, from + q.length)}</mark>);
-    i = from + q.length;
-    from = text.toLowerCase().indexOf(q.toLowerCase(), i);
-  }
-  parts.push(text.slice(i));
-  return parts;
-}
-
 export function EntryRow({
   entry,
-  query,
   activeTags,
   checkable,
   showTime,
@@ -130,7 +112,7 @@ export function EntryRow({
               <TagChip tag={t} active={activeTags.includes(t)} onClick={onTagClick} />{" "}
             </Fragment>
           ))}
-        {entry.body && <span className="row-body">{highlight(entry.body, query)}</span>}
+        {entry.body && <span className="row-body">{renderMarkdown(entry.body)}</span>}
         {entry.edited && (
           <span className="edited-flag" title="edited">
             {" "}

@@ -11,7 +11,6 @@ import { config } from "../config";
 interface Props {
   entries: Entry[];
   sort: SortMode;
-  query: string;
   activeTags: string[];
   filtering: boolean;
   focus: boolean;
@@ -63,7 +62,6 @@ export function Feed(props: Props) {
   const {
     entries,
     sort,
-    query,
     activeTags,
     filtering,
     focus,
@@ -98,7 +96,6 @@ export function Feed(props: Props) {
   const renderRow = (entry: Entry, minimal = false) => (
     <EntryRow
       entry={entry}
-      query={query}
       activeTags={activeTags}
       checkable={isTask(entry.tags, taskTags) || !!entry.done}
       showTime={minimal ? false : showTime}

@@ -531,6 +531,36 @@ body {
   border-radius: 3px;
   padding: 0 1px;
 }
+
+/* ---------- Inline Markdown in entry bodies (see lib/markdown.tsx) ---------- */
+.md-code {
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  background: var(--bg-sunk);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 0.5px 5px;
+}
+.md-link {
+  color: var(--clay);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.md-link:hover {
+  color: var(--clay-deep);
+}
+.md-list {
+  margin: 2px 0 2px;
+  padding-left: 1.25em;
+  list-style: disc;
+}
+.md-list li {
+  margin: 1px 0;
+}
+.row-body strong,
+.card-body strong {
+  font-weight: 600;
+}
 .edited-flag {
   font-size: 10px;
   color: var(--ink-faint);

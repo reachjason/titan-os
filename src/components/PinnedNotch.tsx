@@ -4,7 +4,6 @@ import { isTask } from "../store/usePrefs";
 
 interface Props {
   entries: Entry[];
-  query: string;
   activeTags: string[];
   taskTags: string[];
   showTime: boolean;
@@ -19,7 +18,6 @@ interface Props {
 /** Always-visible tray of pinned tasks, sitting just under the header. */
 export function PinnedNotch({
   entries,
-  query,
   activeTags,
   taskTags,
   showTime,
@@ -38,7 +36,6 @@ export function PinnedNotch({
           <EntryRow
             key={`pin:${e.id}`}
             entry={e}
-            query={query}
             activeTags={activeTags}
             checkable={isTask(e.tags, taskTags) || !!e.done}
             showTime={showTime}

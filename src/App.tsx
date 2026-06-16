@@ -376,7 +376,6 @@ function Workspace() {
             {!focus && (
               <PinnedNotch
                 entries={pinned}
-                query=""
                 activeTags={filter.tags}
                 taskTags={prefs.taskTags}
                 showTime={prefs.showTimestamps}
@@ -393,7 +392,6 @@ function Workspace() {
               <Feed
                 entries={focus ? entries : filtered}
                 sort={sort}
-                query=""
                 activeTags={filter.tags}
                 filtering={filtering}
                 focus={focus}
