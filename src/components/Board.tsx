@@ -113,11 +113,13 @@ function Card({
 export function Board({ entries, onMove, onTogglePin, onDelete, onTagClick }: Props) {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [overCol, setOverCol] = useState<TaskStatus | null>(null);
+  // Default to a focus board: only pinned/starred entries. Toggle to see all.
+  const [pinnedOnly, setPinnedOnly] = useState(true);
 
-  // Every entry lives on the board — anything without an explicit status defaults
-  // to "To Do" (via statusOf). Drag a card to move it between columns.
+  // Anything without an explicit status defaults to "To Do" (via statusOf).
+  const visible = pinnedOnly ? entries.filter((e) => e.pinned) : entries;
   const colItems = (key: TaskStatus) =>
-    entries.filter((e) => statusOf(e) === key).sort((a, b) => orderOf(a) - orderOf(b));
+    visible.filter((e) => statusOf(e) === key).sort((a, b) => orderOf(a) - orderOf(b));
 
   const orderBefore = (list: Entry[], target: Entry) => {
     const idx = list.findIndex((e) => e.id === target.id);
@@ -136,8 +138,23 @@ export function Board({ entries, onMove, onTogglePin, onDelete, onTagClick }: Pr
   };
 
   return (
-    <div className="board">
-      {COLUMNS.map((col) => {
+    <div className="board-wrap">
+      <div className="board-bar">
+        <button
+          className={`board-filter${pinnedOnly ? " on" : ""}`}
+          onClick={() => setPinnedOnly((v) => !v)}
+          title={
+            pinnedOnly
+              ? "Showing pinned tasks — click to show all"
+              : "Showing all tasks — click to show pinned only"
+          }
+        >
+          <span className="board-filter-star">{pinnedOnly ? "★" : "☆"}</span>
+          {pinnedOnly ? "Pinned only" : "All tasks"}
+        </button>
+      </div>
+      <div className="board">
+        {COLUMNS.map((col) => {
         const list = colItems(col.key);
         return (
           <div
@@ -191,8 +208,9 @@ export function Board({ entries, onMove, onTogglePin, onDelete, onTagClick }: Pr
               {list.length === 0 && <div className="column-empty">Drop here</div>}
             </div>
           </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }

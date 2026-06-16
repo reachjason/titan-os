@@ -1236,14 +1236,50 @@ kbd {
 }
 
 /* ---------- Kanban board ---------- */
-.board {
+.board-wrap {
   display: flex;
-  gap: 12px;
+  flex-direction: column;
   height: 100%;
   width: 100%;
   max-width: 760px;
   margin: 0 auto;
-  padding: 26px 22px;
+}
+.board-bar {
+  display: flex;
+  align-items: center;
+  padding: 18px 22px 0;
+}
+.board-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--line);
+  background: none;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink-faint);
+  padding: 5px 11px;
+  border-radius: 999px;
+  transition: color 0.12s, border-color 0.12s;
+}
+.board-filter:hover {
+  color: var(--ink-soft);
+}
+.board-filter.on {
+  color: var(--clay);
+  border-color: var(--clay);
+}
+.board-filter-star {
+  font-size: 11px;
+}
+.board {
+  display: flex;
+  gap: 12px;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  padding: 14px 22px 22px;
   align-items: stretch;
 }
 .column {
