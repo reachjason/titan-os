@@ -14,6 +14,7 @@ import { Board } from "./components/Board";
 import { TagChip } from "./components/TagChip";
 import { Spotlight } from "./components/Spotlight";
 import { AccountMenu } from "./components/AccountMenu";
+import { FilterMenu } from "./components/FilterMenu";
 import { SignIn } from "./components/SignIn";
 import { Toast } from "./components/Toast";
 import { config } from "./config";
@@ -73,6 +74,7 @@ function Workspace() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [spotOpen, setSpotOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
   const [focus, setFocus] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const barRef = useRef<TerminalBarHandle>(null);
@@ -273,6 +275,48 @@ function Workspace() {
                   {s.icon}
                 </button>
               ))}
+            </div>
+          )}
+
+          {view === "list" && (
+            <div className="filter-wrap">
+              <button
+                className={`filter-trigger${filter.tags.length ? " filter-on" : ""}`}
+                onClick={() => setFilterOpen((o) => !o)}
+                title="Filter by tag"
+                aria-label="Filter by tag"
+                aria-expanded={filterOpen}
+              >
+                <svg
+                  className="filter-glyph"
+                  viewBox="0 0 16 16"
+                  width="13"
+                  height="13"
+                  aria-hidden="true"
+                >
+                  <path
+                    fill="currentColor"
+                    d="M1.5 2.5h13a.5.5 0 0 1 .4.8L10 9.2V14a.5.5 0 0 1-.74.44l-2.5-1.4A.5.5 0 0 1 6.5 12.6V9.2L1.1 3.3a.5.5 0 0 1 .4-.8Z"
+                  />
+                </svg>
+                {filter.tags.length > 0 && (
+                  <span className="filter-count">{filter.tags.length}</span>
+                )}
+              </button>
+              {filterOpen && (
+                <FilterMenu
+                  tags={knownTags}
+                  active={filter.tags}
+                  match={filter.match}
+                  onToggle={toggleTag}
+                  onToggleMatch={toggleMatch}
+                  onClear={() => {
+                    clearFilters();
+                    setFilterOpen(false);
+                  }}
+                  onClose={() => setFilterOpen(false)}
+                />
+              )}
             </div>
           )}
 

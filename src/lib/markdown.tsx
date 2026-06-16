@@ -26,6 +26,16 @@ const INLINE_RULES: {
     render: (m) => <code key={nextKey()} className="md-code">{m[1]}</code>,
   },
   {
+    // @mention — highlighted; keeps the "@" so it reads as a tag. Requires a
+    // word boundary before "@" so emails (a@b.com) aren't matched.
+    re: /(?:^|(?<=\s))@([a-z0-9][a-z0-9_-]*)/i,
+    render: (m) => (
+      <span key={nextKey()} className="mention">
+        @{m[1]}
+      </span>
+    ),
+  },
+  {
     // [text](url) — only http(s)/mailto links are linkified; others stay literal
     re: /\[([^\]]+)\]\((https?:\/\/[^\s)]+|mailto:[^\s)]+)\)/,
     render: (m) => (

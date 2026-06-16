@@ -119,6 +119,11 @@ export function EntryRow({
             ✎
           </span>
         )}
+        {entry.isMine === false && entry.authorName && (
+          <span className="row-author" title={`Added by ${entry.authorName}`}>
+            by {entry.authorName}
+          </span>
+        )}
       </div>
 
       <div className="row-trail">
@@ -134,11 +139,6 @@ export function EntryRow({
           </div>
         ) : (
           <>
-            {entry.isMine === false && entry.authorName && (
-              <span className="row-author" title={`Added by ${entry.authorName}`}>
-                added by {entry.authorName}
-              </span>
-            )}
             <div className="row-actions">
               <button
                 className={`icon-btn${entry.pinned ? " icon-pinned" : ""}`}
