@@ -3,6 +3,8 @@
 > **READ THIS FIRST.** This project is **PROD-ONLY**. There is exactly one Convex
 > deployment and everyone — including local development — uses it.
 
+**Live:** https://www.usetitan.xyz · deploys on every push to `main` (GitHub Actions).
+
 ## ⛔ The one rule: PROD-ONLY, no dev deployment
 
 - The single Convex deployment is **production**: `robust-grasshopper-674`

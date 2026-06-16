@@ -1,9 +1,14 @@
 # Titan OS — Deployment (PROD-ONLY)
 
+**Live:** https://www.usetitan.xyz — deployed on every push to `main` via GitHub
+Actions (`.github/workflows/deploy.yml`). Fully working end-to-end: custom domain →
+Vercel frontend → Convex backend → GitHub auth → per-user data.
+
 This project uses a **single Convex deployment: production** (`robust-grasshopper-674`).
 There is no dev deployment — see `CLAUDE.md`. Entries live in Convex, scoped per
 GitHub user; theme/prefs/sort+view stay in `localStorage` (per-device).
 
+- Production site: `https://www.usetitan.xyz`
 - Convex prod Cloud URL: `https://robust-grasshopper-674.convex.cloud`
 - Convex prod Site URL (OAuth callbacks): `https://robust-grasshopper-674.convex.site`
 - `.env.local` (gitignored) pins the CLI + frontend to prod:
@@ -17,27 +22,30 @@ GitHub user; theme/prefs/sort+view stay in `localStorage` (per-device).
 
 ---
 
-## Already done (by the migration)
+## ✅ Done & verified (full stack is live)
 
-- Prod Convex deployment created; schema + functions + auth tables deployed to it.
+- Prod Convex deployment created; schema + functions + auth tables deployed.
 - Prod auth keys generated (`JWT_PRIVATE_KEY`, `JWKS`).
-- `AUTH_GITHUB_ID` set on prod.
+- Prod Convex env set: `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`,
+  `SITE_URL=https://www.usetitan.xyz`.
+- GitHub OAuth app callback → `https://robust-grasshopper-674.convex.site/api/auth/callback/github`.
+- GitHub login → create / persist / delete entry all verified on prod.
+- CI/CD: push to `main` → Convex deploy + Vercel build/deploy (5 GitHub secrets set).
+- Custom domain `www.usetitan.xyz` attached to the Vercel project.
 
-## A. Finish GitHub OAuth (you — needs the secret)
+## A. GitHub OAuth reference (already configured)
 
-1. **GitHub OAuth App** → github.com → Settings → Developer settings →
-   **OAuth Apps**. Use the existing app (or create one):
-   - Homepage URL: your Vercel URL (e.g. `https://titan-os.vercel.app`)
-   - **Authorization callback URL:**
-     `https://robust-grasshopper-674.convex.site/api/auth/callback/github`
-2. Set the secret on prod (the ID is already set):
-   ```bash
-   npx convex env set AUTH_GITHUB_SECRET <your-client-secret>
-   ```
-3. Set `SITE_URL` to your Vercel domain (currently a placeholder):
-   ```bash
-   npx convex env set SITE_URL https://<your-app>.vercel.app
-   ```
+If you ever need to recreate the OAuth app:
+- **OAuth App** → github.com → Settings → Developer settings → **OAuth Apps**:
+  - Homepage URL: `https://www.usetitan.xyz`
+  - **Authorization callback URL:**
+    `https://robust-grasshopper-674.convex.site/api/auth/callback/github`
+- Set the creds on prod Convex:
+  ```bash
+  npx convex env set AUTH_GITHUB_ID <client-id>
+  npx convex env set AUTH_GITHUB_SECRET <client-secret>
+  npx convex env set SITE_URL https://www.usetitan.xyz
+  ```
 
 To sanity-check what's set:
 ```bash
