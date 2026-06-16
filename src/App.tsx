@@ -60,6 +60,7 @@ function Workspace() {
   const { theme, toggle } = useTheme();
   const { prefs, toggleTimestamps, toggleTags, addTaskTag, removeTaskTag } = usePrefs();
   const currentUser = useQuery(api.users.currentUser);
+  const people = useQuery(api.users.list) ?? [];
   const avatarInitial = (currentUser?.name || currentUser?.email || "?")[0].toUpperCase();
   const [filter, setFilter] = useState<FilterState>(() => ({
     tags: [],
@@ -364,7 +365,6 @@ function Workspace() {
           <main className="feed-area">
             <Board
               entries={filtered}
-              taskTags={prefs.taskTags}
               onMove={(id, status, order) => moveCard(id, status, order, prefs.taskTags)}
               onTogglePin={togglePin}
               onDelete={remove}
@@ -410,7 +410,13 @@ function Workspace() {
         )}
 
         <footer className="bar-area">
-          <TerminalBar ref={barRef} onSubmit={logEntry} knownTags={knownTags} history={history} />
+          <TerminalBar
+            ref={barRef}
+            onSubmit={logEntry}
+            knownTags={knownTags}
+            people={people}
+            history={history}
+          />
         </footer>
 
         {spotOpen && (

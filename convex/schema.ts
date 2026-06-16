@@ -26,5 +26,8 @@ export default defineSchema({
     status: v.union(v.literal("todo"), v.literal("doing"), v.literal("done")),
     /** Manual sort position (board column + list "manual" sort). */
     order: v.number(),
+    /** Users @mentioned on this entry — they also see + can edit it. Optional
+     *  so pre-existing rows (written before mentions existed) stay valid. */
+    mentions: v.optional(v.array(v.id("users"))),
   }).index("by_user", ["userId"]),
 });

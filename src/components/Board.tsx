@@ -1,7 +1,6 @@
 import { useState } from "react";
 import type { Entry, TaskStatus } from "../types";
 import { statusOf, orderOf } from "../lib/tasks";
-import { isTask } from "../store/usePrefs";
 import { TagChip } from "./TagChip";
 import { renderMarkdown } from "../lib/markdown";
 
@@ -13,7 +12,6 @@ const COLUMNS: { key: TaskStatus; label: string }[] = [
 
 interface Props {
   entries: Entry[];
-  taskTags: string[];
   onMove: (id: string, status: TaskStatus, order: number) => void;
   onTogglePin: (id: string) => void;
   onDelete: (id: string) => void;
@@ -112,14 +110,14 @@ function Card({
   );
 }
 
-export function Board({ entries, taskTags, onMove, onTogglePin, onDelete, onTagClick }: Props) {
+export function Board({ entries, onMove, onTogglePin, onDelete, onTagClick }: Props) {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [overCol, setOverCol] = useState<TaskStatus | null>(null);
 
-  const tasks = entries.filter((e) => isTask(e.tags, taskTags) || statusOf(e) === "done");
-
+  // Every entry lives on the board — anything without an explicit status defaults
+  // to "To Do" (via statusOf). Drag a card to move it between columns.
   const colItems = (key: TaskStatus) =>
-    tasks.filter((e) => statusOf(e) === key).sort((a, b) => orderOf(a) - orderOf(b));
+    entries.filter((e) => statusOf(e) === key).sort((a, b) => orderOf(a) - orderOf(b));
 
   const orderBefore = (list: Entry[], target: Entry) => {
     const idx = list.findIndex((e) => e.id === target.id);

@@ -1,11 +1,15 @@
 import { useCallback, useMemo } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import type { Doc, Id } from "../../convex/_generated/dataModel";
+import type { FunctionReturnType } from "convex/server";
+import type { Id } from "../../convex/_generated/dataModel";
 import type { Entry, TaskStatus } from "../types";
 
-/** Map a Convex `entries` document to the app's Entry shape used throughout the UI. */
-function toEntry(doc: Doc<"entries">): Entry {
+/** A single item from the entries.list query (a doc + author annotations). */
+type ListItem = FunctionReturnType<typeof api.entries.list>[number];
+
+/** Map a Convex `entries` list item to the app's Entry shape used throughout the UI. */
+function toEntry(doc: ListItem): Entry {
   return {
     id: doc._id,
     raw: doc.raw,
@@ -18,6 +22,10 @@ function toEntry(doc: Doc<"entries">): Entry {
     pinned: doc.pinned,
     status: doc.status,
     order: doc.order,
+    mentions: doc.mentions,
+    authorId: doc.authorId,
+    authorName: doc.authorName,
+    isMine: doc.isMine,
   };
 }
 

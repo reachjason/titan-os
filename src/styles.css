@@ -611,6 +611,17 @@ body {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
+/* "added by X" marker on entries someone else shared with you */
+.row-author {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-faint);
+  background: var(--bg-sunk);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 1px 7px;
+  white-space: nowrap;
+}
 .row-actions {
   display: flex;
   gap: 1px;
@@ -812,6 +823,32 @@ body {
   font-family: var(--font-body);
   font-size: 12.5px;
   color: var(--ink-faint);
+  margin-left: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* People picker (@mention) rows */
+.suggest-avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  object-fit: cover;
+}
+.suggest-avatar-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--clay);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+.suggest-person {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--ink);
 }
 
 /* ---------- Modals (settings + shortcuts) ---------- */

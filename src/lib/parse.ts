@@ -27,3 +27,9 @@ export function activeTagFragment(value: string): string | null {
   const m = value.match(/(?:^|\s)\/([a-z0-9_-]*)$/i);
   return m ? m[1].toLowerCase() : null;
 }
+
+/** Detect an in-progress "@jas" mention at the caret for the people picker. */
+export function activeMentionFragment(value: string): string | null {
+  const m = value.match(/(?:^|\s)@([a-z0-9_-]*)$/i);
+  return m ? m[1].toLowerCase() : null;
+}

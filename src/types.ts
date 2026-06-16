@@ -17,6 +17,14 @@ export interface Entry {
   status?: TaskStatus;
   /** Manual sort position (board column + list "manual" sort). */
   order?: number;
+  /** User IDs @mentioned on this entry (they also see + can edit it). */
+  mentions?: string[];
+  /** Author's user ID (set by the server on list). */
+  authorId?: string;
+  /** Author's first name, for the "added by X" marker. */
+  authorName?: string;
+  /** True when the current user authored this entry. */
+  isMine?: boolean;
 }
 
 export type TaskStatus = "todo" | "doing" | "done";

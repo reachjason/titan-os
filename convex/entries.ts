@@ -2,7 +2,7 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import type { Id, Doc } from "./_generated/dataModel";
-import { applyStatus, parseEntry } from "./lib";
+import { applyStatus, parseEntry, parseMentionTokens, firstNameKey } from "./lib";
 
 const statusValidator = v.union(
   v.literal("todo"),
@@ -17,31 +17,86 @@ async function requireUser(ctx: QueryCtx | MutationCtx): Promise<Id<"users">> {
   return userId;
 }
 
-/** Load an entry and assert the caller owns it. */
-async function ownEntry(
+/**
+ * Resolve @first-name tokens in raw text to user IDs (deduped, excludes author).
+ * The special token `@all` expands to every other user in the database.
+ */
+async function resolveMentions(
+  ctx: MutationCtx,
+  raw: string,
+  author: Id<"users">
+): Promise<Id<"users">[]> {
+  const tokens = parseMentionTokens(raw);
+  if (tokens.length === 0) return [];
+  const users = await ctx.db.query("users").collect();
+  const others = users.filter((u) => u._id !== author);
+
+  // @all → everyone else, no need to resolve the rest.
+  if (tokens.includes("all")) return others.map((u) => u._id);
+
+  const ids: Id<"users">[] = [];
+  for (const t of tokens) {
+    const match = others.find((u) => firstNameKey(u.name ?? u.email) === t);
+    if (match && !ids.includes(match._id)) ids.push(match._id);
+  }
+  return ids;
+}
+
+/** Load an entry the caller may act on (author OR mentioned = full shared edit). */
+async function accessibleEntry(
   ctx: MutationCtx,
   userId: Id<"users">,
   id: Id<"entries">
 ): Promise<Doc<"entries">> {
   const entry = await ctx.db.get(id);
-  if (!entry || entry.userId !== userId) throw new Error("Entry not found");
+  const canAccess =
+    entry && (entry.userId === userId || (entry.mentions ?? []).includes(userId));
+  if (!canAccess) throw new Error("Entry not found");
   return entry;
 }
 
-/** All of the signed-in user's entries (empty when logged out). */
+/**
+ * Entries the signed-in user authored OR was @mentioned in, each annotated with
+ * the author's first name + whether the caller is the author.
+ */
 export const list = query({
   args: {},
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) return [];
-    return await ctx.db
+
+    const mine = await ctx.db
       .query("entries")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
+
+    // Entries where I'm mentioned (authored by others). No array index in Convex,
+    // so scan + filter — fine at this scale (small team).
+    const all = await ctx.db.query("entries").collect();
+    const mentioned = all.filter(
+      (e) => e.userId !== userId && (e.mentions ?? []).includes(userId)
+    );
+
+    const combined = [...mine, ...mentioned];
+
+    // Resolve author first names once.
+    const authorIds = Array.from(new Set(combined.map((e) => e.userId)));
+    const authorName: Record<string, string> = {};
+    for (const aid of authorIds) {
+      const u = await ctx.db.get(aid);
+      authorName[aid] = (u?.name ?? u?.email ?? "Someone").trim().split(/\s+/)[0];
+    }
+
+    return combined.map((e) => ({
+      ...e,
+      authorId: e.userId,
+      authorName: authorName[e.userId],
+      isMine: e.userId === userId,
+    }));
   },
 });
 
-/** Create an entry from raw text. */
+/** Create an entry from raw text, resolving any @mentions. */
 export const add = mutation({
   args: { raw: v.string() },
   handler: async (ctx, { raw }) => {
@@ -49,6 +104,7 @@ export const add = mutation({
     const trimmed = raw.trim();
     if (!trimmed) return null;
     const { tags, body } = parseEntry(trimmed);
+    const mentions = await resolveMentions(ctx, trimmed, userId);
     const now = Date.now();
     return await ctx.db.insert("entries", {
       userId,
@@ -62,20 +118,31 @@ export const add = mutation({
       pinned: false,
       status: "todo",
       order: now,
+      mentions,
     });
   },
 });
 
-/** Edit an entry's raw text, reparsing body/tags. */
+/** Edit an entry's raw text, reparsing body/tags/mentions. */
 export const update = mutation({
   args: { id: v.id("entries"), raw: v.string() },
   handler: async (ctx, { id, raw }) => {
     const userId = await requireUser(ctx);
-    await ownEntry(ctx, userId, id);
+    const entry = await accessibleEntry(ctx, userId, id);
     const trimmed = raw.trim();
     if (!trimmed) return;
     const { tags, body } = parseEntry(trimmed);
-    await ctx.db.patch(id, { raw: trimmed, body, tags, edited: true, updatedAt: Date.now() });
+    // Mentions resolve against the original author (so editing as a mentioned
+    // collaborator doesn't accidentally drop the author or add themselves).
+    const mentions = await resolveMentions(ctx, trimmed, entry.userId);
+    await ctx.db.patch(id, {
+      raw: trimmed,
+      body,
+      tags,
+      mentions,
+      edited: true,
+      updatedAt: Date.now(),
+    });
   },
 });
 
@@ -83,7 +150,7 @@ export const remove = mutation({
   args: { id: v.id("entries") },
   handler: async (ctx, { id }) => {
     const userId = await requireUser(ctx);
-    await ownEntry(ctx, userId, id);
+    await accessibleEntry(ctx, userId, id);
     await ctx.db.delete(id);
   },
 });
@@ -93,7 +160,7 @@ export const toggleDone = mutation({
   args: { id: v.id("entries"), taskTags: v.array(v.string()) },
   handler: async (ctx, { id, taskTags }) => {
     const userId = await requireUser(ctx);
-    const entry = await ownEntry(ctx, userId, id);
+    const entry = await accessibleEntry(ctx, userId, id);
     const next = entry.done || entry.tags.includes("done") ? "todo" : "done";
     const changed = applyStatus(entry, next, taskTags);
     await ctx.db.patch(id, { ...changed, status: next });
@@ -104,7 +171,7 @@ export const togglePin = mutation({
   args: { id: v.id("entries") },
   handler: async (ctx, { id }) => {
     const userId = await requireUser(ctx);
-    const entry = await ownEntry(ctx, userId, id);
+    const entry = await accessibleEntry(ctx, userId, id);
     await ctx.db.patch(id, { pinned: !entry.pinned });
   },
 });
@@ -119,7 +186,7 @@ export const moveCard = mutation({
   },
   handler: async (ctx, { id, status, order, taskTags }) => {
     const userId = await requireUser(ctx);
-    const entry = await ownEntry(ctx, userId, id);
+    const entry = await accessibleEntry(ctx, userId, id);
     const changed = applyStatus(entry, status, taskTags);
     await ctx.db.patch(id, { ...changed, status, order });
   },
@@ -130,7 +197,7 @@ export const setOrder = mutation({
   args: { id: v.id("entries"), order: v.number() },
   handler: async (ctx, { id, order }) => {
     const userId = await requireUser(ctx);
-    await ownEntry(ctx, userId, id);
+    await accessibleEntry(ctx, userId, id);
     await ctx.db.patch(id, { order });
   },
 });

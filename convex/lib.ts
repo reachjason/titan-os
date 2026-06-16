@@ -5,6 +5,24 @@
 export type TaskStatus = "todo" | "doing" | "done";
 
 const TAG = /(^|\s)\/([a-z0-9][a-z0-9_-]*)/gi;
+const MENTION = /(^|\s)@([a-z0-9][a-z0-9_-]*)/gi;
+
+/** Lowercased @mention tokens from raw text, e.g. "ping @jason" -> ["jason"]. */
+export function parseMentionTokens(raw: string): string[] {
+  const out: string[] = [];
+  let m: RegExpExecArray | null;
+  MENTION.lastIndex = 0;
+  while ((m = MENTION.exec(raw))) {
+    const t = m[2].toLowerCase();
+    if (!out.includes(t)) out.push(t);
+  }
+  return out;
+}
+
+/** A user's first name, lowercased, for matching @mentions. */
+export function firstNameKey(name: string | undefined): string {
+  return (name || "").trim().split(/\s+/)[0].toLowerCase();
+}
 
 /**
  * Extract /tags (anywhere in the line) and the remaining body text.
