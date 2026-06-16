@@ -1,169 +1,82 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useMemo } from "react";
+import { useMutation, useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import type { Doc, Id } from "../../convex/_generated/dataModel";
 import type { Entry, TaskStatus } from "../types";
-import { parseEntry } from "../lib/parse";
-import { config } from "../config";
 
-const STORAGE_KEY = config.storage.entriesKey;
-
-/** Rewrite /tags matching `fromTags` to `/to` in a raw string. */
-function retagRaw(raw: string, fromTags: string[], to: string): string {
-  return raw.replace(/(^|\s)\/([a-z0-9][a-z0-9_-]*)/gi, (m, sp, tag) =>
-    fromTags.includes(tag.toLowerCase()) ? `${sp}/${to}` : m
-  );
+/** Map a Convex `entries` document to the app's Entry shape used throughout the UI. */
+function toEntry(doc: Doc<"entries">): Entry {
+  return {
+    id: doc._id,
+    raw: doc.raw,
+    body: doc.body,
+    tags: doc.tags,
+    createdAt: doc.createdAt ?? doc._creationTime,
+    updatedAt: doc.updatedAt,
+    edited: doc.edited,
+    done: doc.done,
+    pinned: doc.pinned,
+    status: doc.status,
+    order: doc.order,
+  };
 }
 
-/** Move an entry to a status, syncing its done flag + /do↔/done tag. */
-function applyStatus(e: Entry, status: TaskStatus, taskTags: string[]): Entry {
-  const wasDone = !!e.done || e.tags.includes("done");
-  let { tags, raw } = e;
-  let done = !!e.done;
-  if (status === "done" && !wasDone) {
-    tags = Array.from(new Set(e.tags.map((t) => (taskTags.includes(t) ? "done" : t))));
-    raw = retagRaw(e.raw, taskTags, "done");
-    done = true;
-  } else if (status !== "done" && wasDone) {
-    tags = Array.from(new Set(e.tags.map((t) => (t === "done" ? "do" : t))));
-    raw = retagRaw(e.raw, ["done"], "do");
-    done = false;
-  }
-  return { ...e, status, tags, raw, done };
-}
-
-function makeId(): string {
-  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-}
-
-/** Example entries shown on a genuine first run, so the app opens populated. */
-function seed(): Entry[] {
-  const base = new Date();
-  base.setHours(8, 42, 0, 0);
-  const t0 = base.getTime();
-  const rows: { raw: string; done?: boolean; status?: TaskStatus }[] = [
-    { raw: "/todo create a proposal for chiliz", status: "todo" },
-    { raw: "/note plot points in time of news in backtested graphs" },
-    { raw: "/idea newsletter for cesto community" },
-    { raw: "/urgent check colosseum competition" },
-    { raw: "/followup superteam black status" },
-    { raw: "/done coffee", done: true, status: "done" },
-  ];
-  return rows.map((r, i) => {
-    const ts = t0 + i * 60000;
-    const { tags, body } = parseEntry(r.raw);
-    return {
-      id: `seed-${i}`,
-      raw: r.raw,
-      body,
-      tags,
-      createdAt: ts,
-      updatedAt: ts,
-      edited: false,
-      done: !!r.done,
-      pinned: false,
-      status: r.status ?? "todo",
-      order: ts,
-    };
-  });
-}
-
-function load(): Entry[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw === null) return seed(); // genuine first run → populated demo
-    const parsed = JSON.parse(raw) as Entry[];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
+/**
+ * Entries store, backed by Convex (real-time, per signed-in user).
+ * Keeps the same public API the rest of the app already consumes so callers
+ * (App.tsx, Feed, Board, EntryRow, …) are unchanged.
+ */
 export function useEntries() {
-  const [entries, setEntries] = useState<Entry[]>(load);
-  const writeTimer = useRef<number | null>(null);
+  const docs = useQuery(api.entries.list);
+  const addM = useMutation(api.entries.add);
+  const updateM = useMutation(api.entries.update);
+  const removeM = useMutation(api.entries.remove);
+  const toggleDoneM = useMutation(api.entries.toggleDone);
+  const togglePinM = useMutation(api.entries.togglePin);
+  const moveCardM = useMutation(api.entries.moveCard);
+  const setOrderM = useMutation(api.entries.setOrder);
 
-  // Debounced persistence.
-  useEffect(() => {
-    if (writeTimer.current) window.clearTimeout(writeTimer.current);
-    writeTimer.current = window.setTimeout(() => {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
-    }, 150);
-    return () => {
-      if (writeTimer.current) window.clearTimeout(writeTimer.current);
-    };
-  }, [entries]);
+  // `undefined` while loading → render as empty (the UI shows its first-run state).
+  const entries = useMemo(() => (docs ?? []).map(toEntry), [docs]);
 
-  const add = useCallback((raw: string) => {
-    const trimmed = raw.trim();
-    if (!trimmed) return;
-    const { tags, body } = parseEntry(trimmed);
-    const now = Date.now();
-    const entry: Entry = {
-      id: makeId(),
-      raw: trimmed,
-      body,
-      tags,
-      createdAt: now,
-      updatedAt: now,
-      edited: false,
-      done: false,
-      pinned: false,
-      status: "todo",
-      order: now,
-    };
-    setEntries((prev) => [...prev, entry]);
-  }, []);
-
-  // Checkbox: toggle between done and todo (syncs /do↔/done).
-  const toggleDone = useCallback((id: string, taskTags: string[]) => {
-    setEntries((prev) =>
-      prev.map((e) => {
-        if (e.id !== id) return e;
-        const next: TaskStatus =
-          e.done || e.tags.includes("done") ? "todo" : "done";
-        return applyStatus(e, next, taskTags);
-      })
-    );
-  }, []);
-
-  // Board drag: set a card's column + manual position at once.
+  const add = useCallback((raw: string) => void addM({ raw }), [addM]);
+  const update = useCallback(
+    (id: string, raw: string) => void updateM({ id: id as Id<"entries">, raw }),
+    [updateM]
+  );
+  const remove = useCallback(
+    (id: string) => void removeM({ id: id as Id<"entries"> }),
+    [removeM]
+  );
+  const toggleDone = useCallback(
+    (id: string, taskTags: string[]) =>
+      void toggleDoneM({ id: id as Id<"entries">, taskTags }),
+    [toggleDoneM]
+  );
+  const togglePin = useCallback(
+    (id: string) => void togglePinM({ id: id as Id<"entries"> }),
+    [togglePinM]
+  );
   const moveCard = useCallback(
-    (id: string, status: TaskStatus, order: number, taskTags: string[]) => {
-      setEntries((prev) =>
-        prev.map((e) => (e.id === id ? { ...applyStatus(e, status, taskTags), order } : e))
-      );
-    },
-    []
+    (id: string, status: TaskStatus, order: number, taskTags: string[]) =>
+      void moveCardM({ id: id as Id<"entries">, status, order, taskTags }),
+    [moveCardM]
+  );
+  const setOrder = useCallback(
+    (id: string, order: number) =>
+      void setOrderM({ id: id as Id<"entries">, order }),
+    [setOrderM]
   );
 
-  // List manual reorder: set a row's position without changing status.
-  const setOrder = useCallback((id: string, order: number) => {
-    setEntries((prev) => prev.map((e) => (e.id === id ? { ...e, order } : e)));
-  }, []);
-
-  const togglePin = useCallback((id: string) => {
-    setEntries((prev) =>
-      prev.map((e) => (e.id === id ? { ...e, pinned: !e.pinned } : e))
-    );
-  }, []);
-
-  const update = useCallback((id: string, raw: string) => {
-    const trimmed = raw.trim();
-    setEntries((prev) =>
-      prev.map((e) => {
-        if (e.id !== id) return e;
-        if (!trimmed) return e;
-        const { tags, body } = parseEntry(trimmed);
-        return { ...e, raw: trimmed, body, tags, updatedAt: Date.now(), edited: true };
-      })
-    );
-  }, []);
-
-  const remove = useCallback((id: string) => {
-    setEntries((prev) => prev.filter((e) => e.id !== id));
-  }, []);
-
-  const importEntries = useCallback((next: Entry[]) => {
-    setEntries(next);
-  }, []);
+  // Import: push each entry's raw text through `add` (server reparses + scopes to user).
+  const importEntries = useCallback(
+    (next: Entry[]) => {
+      for (const e of next) {
+        if (e?.raw) void addM({ raw: e.raw });
+      }
+    },
+    [addM]
+  );
 
   return {
     entries,

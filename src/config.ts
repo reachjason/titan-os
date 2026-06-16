@@ -58,13 +58,6 @@ export const config = {
     mark: "◐",
   },
 
-  /** Signed-in user shown in the account popover (demo / front-end only). */
-  account: {
-    initial: "A",
-    email: "alex@titan.os",
-    subtitle: "Signed in with Google",
-  },
-
   /**
    * Built-in slash commands. ADD A COMMAND = add one line here.
    * Tags you invent on the fly still work; they just get an auto color.
@@ -116,9 +109,11 @@ export const config = {
     taskTags: ["do", "todo"],
   },
 
-  /** localStorage keys. Change these to keep separate inboxes. */
+  /**
+   * localStorage keys for per-device UI state. Entries live in Convex, scoped
+   * to the signed-in user — they are not in localStorage.
+   */
   storage: {
-    entriesKey: "titan-os.entries.v1",
     themeKey: "titan-os.theme",
     /** Remembers sort mode + match mode across reloads. */
     viewKey: "titan-os.view.v1",

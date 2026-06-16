@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Authenticated, Unauthenticated, AuthLoading, useQuery } from "convex/react";
+import { api } from "../convex/_generated/api";
 import { useEntries } from "./store/useEntries";
 import { useTheme } from "./store/useTheme";
 import { usePrefs } from "./store/usePrefs";
@@ -12,9 +14,27 @@ import { Board } from "./components/Board";
 import { TagChip } from "./components/TagChip";
 import { Spotlight } from "./components/Spotlight";
 import { AccountMenu } from "./components/AccountMenu";
+import { SignIn } from "./components/SignIn";
 import { Toast } from "./components/Toast";
 import { config } from "./config";
 import type { Entry, FilterState, SortMode, ViewMode } from "./types";
+
+/** Gate the app on auth state: sign-in screen when logged out, workspace when in. */
+export default function App() {
+  return (
+    <>
+      <AuthLoading>
+        <div className="auth-loading">Loading…</div>
+      </AuthLoading>
+      <Unauthenticated>
+        <SignIn />
+      </Unauthenticated>
+      <Authenticated>
+        <Workspace />
+      </Authenticated>
+    </>
+  );
+}
 
 /** Sort/group modes shown as bare monospace glyphs (design order: ↓ ↑ # ⇅). */
 const SORTS: { mode: SortMode; icon: string; label: string }[] = [
@@ -34,11 +54,13 @@ function loadView(): { sort: SortMode; match: "any" | "all"; view: ViewMode } | 
   }
 }
 
-export default function App() {
+function Workspace() {
   const { entries, add, update, remove, toggleDone, togglePin, moveCard, setOrder, importEntries } =
     useEntries();
   const { theme, toggle } = useTheme();
   const { prefs, toggleTimestamps, toggleTags, addTaskTag, removeTaskTag } = usePrefs();
+  const currentUser = useQuery(api.users.currentUser);
+  const avatarInitial = (currentUser?.name || currentUser?.email || "?")[0].toUpperCase();
   const [filter, setFilter] = useState<FilterState>(() => ({
     tags: [],
     match: loadView()?.match ?? "any",
@@ -286,13 +308,17 @@ export default function App() {
                 aria-label="Account"
                 aria-expanded={accountOpen}
               >
-                {config.account.initial}
+                {currentUser?.image ? (
+                  <img className="avatar-img" src={currentUser.image} alt="" />
+                ) : (
+                  avatarInitial
+                )}
               </button>
               {accountOpen && (
                 <AccountMenu
                   onSignOut={() => {
                     setAccountOpen(false);
-                    flash("Signed out (demo)");
+                    flash("Signing out…");
                   }}
                   onClose={() => setAccountOpen(false)}
                 />
