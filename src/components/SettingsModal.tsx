@@ -49,6 +49,7 @@ export function SettingsModal({
   const [copied, setCopied] = useState<string | null>(null);
   const [mcpBusy, setMcpBusy] = useState(false);
   const [mcpEnsured, setMcpEnsured] = useState(false);
+  const [mcpOpen, setMcpOpen] = useState(false);
   const mcpAccess = useQuery(api.mcp.getAccess);
   const ensureMcpKey = useAction(api.mcp.ensureKey);
   const rotateMcpKey = useAction(api.mcp.rotateKey);
@@ -63,11 +64,11 @@ export function SettingsModal({
   }, [onClose]);
 
   useEffect(() => {
-    if (mcpAccess && !mcpAccess.key && !mcpEnsured) {
+    if (mcpOpen && mcpAccess && !mcpAccess.key && !mcpEnsured) {
       setMcpEnsured(true);
       void ensureMcpKey({});
     }
-  }, [ensureMcpKey, mcpAccess, mcpEnsured]);
+  }, [ensureMcpKey, mcpAccess, mcpEnsured, mcpOpen]);
 
   const addTag = () => {
     onAddTaskTag(draft);
@@ -194,64 +195,73 @@ export function SettingsModal({
           </div>
         </div>
 
-        <div className="set-block">
-          <div className="set-label">
-            MCP access
-            <span className="set-sub">Remote LLM access to your visible Titan entries.</span>
-          </div>
-          <div className="mcp-panel">
-            <label className="mcp-field">
-              <span>Endpoint</span>
-              <div className="mcp-copyrow">
-                <input readOnly value={mcpAccess?.endpoint ?? "Loading..."} />
-                <button
-                  className="ghost-btn"
-                  onClick={() => mcpAccess?.endpoint && copy("Endpoint", mcpAccess.endpoint)}
-                  disabled={!mcpAccess?.endpoint}
-                >
-                  Copy
-                </button>
-              </div>
-            </label>
+        <div className="set-block set-block-accordion">
+          <button
+            className="set-accordion-trigger"
+            onClick={() => setMcpOpen((open) => !open)}
+            aria-expanded={mcpOpen}
+          >
+            <span className="set-label">
+              MCP access
+              <span className="set-sub">Remote LLM access to your visible Titan entries.</span>
+            </span>
+            <span className={`set-chevron${mcpOpen ? " set-chevron-open" : ""}`}>⌄</span>
+          </button>
+          {mcpOpen && (
+            <div className="mcp-panel">
+              <label className="mcp-field">
+                <span>Endpoint</span>
+                <div className="mcp-copyrow">
+                  <input readOnly value={mcpAccess?.endpoint ?? "Loading..."} />
+                  <button
+                    className="ghost-btn"
+                    onClick={() => mcpAccess?.endpoint && copy("Endpoint", mcpAccess.endpoint)}
+                    disabled={!mcpAccess?.endpoint}
+                  >
+                    Copy
+                  </button>
+                </div>
+              </label>
 
-            <label className="mcp-field">
-              <span>Bearer key</span>
-              <div className="mcp-copyrow">
-                <input readOnly value={keyDisplay} />
-                <button
-                  className="ghost-btn"
-                  onClick={() => mcpKey && copy("Key", mcpKey)}
-                  disabled={!mcpKey || mcpBusy}
-                >
-                  Copy
-                </button>
-              </div>
-            </label>
+              <label className="mcp-field">
+                <span>Bearer key</span>
+                <div className="mcp-copyrow">
+                  <input readOnly value={keyDisplay} />
+                  <button
+                    className="ghost-btn"
+                    onClick={() => mcpKey && copy("Key", mcpKey)}
+                    disabled={!mcpKey || mcpBusy}
+                  >
+                    Copy
+                  </button>
+                </div>
+              </label>
 
-            <label className="mcp-field">
-              <span>Header</span>
-              <div className="mcp-copyrow">
-                <input readOnly value={bearerHeader || "Authorization: Bearer ..."} />
-                <button
-                  className="ghost-btn"
-                  onClick={() => bearerHeader && copy("Header", bearerHeader)}
-                  disabled={!bearerHeader || mcpBusy}
-                >
-                  Copy
-                </button>
-              </div>
-            </label>
+              <label className="mcp-field">
+                <span>Header</span>
+                <div className="mcp-copyrow">
+                  <input readOnly value={bearerHeader || "Authorization: Bearer ..."} />
+                  <button
+                    className="ghost-btn"
+                    onClick={() => bearerHeader && copy("Header", bearerHeader)}
+                    disabled={!bearerHeader || mcpBusy}
+                  >
+                    Copy
+                  </button>
+                </div>
+              </label>
 
-            <div className="mcp-actions">
-              <button className="ghost-btn" onClick={rotate} disabled={mcpBusy}>
-                Rotate key
-              </button>
-              <button className="ghost-btn" onClick={revoke} disabled={!mcpKey || mcpBusy}>
-                Revoke
-              </button>
-              {copied && <span className="mcp-status">{copied}</span>}
+              <div className="mcp-actions">
+                <button className="ghost-btn" onClick={rotate} disabled={mcpBusy}>
+                  Rotate key
+                </button>
+                <button className="ghost-btn" onClick={revoke} disabled={!mcpKey || mcpBusy}>
+                  Revoke
+                </button>
+                {copied && <span className="mcp-status">{copied}</span>}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         <div className="set-actions">

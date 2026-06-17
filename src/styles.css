@@ -1196,6 +1196,35 @@ kbd {
   padding: 13px 0 4px;
   border-top: 1px solid var(--line);
 }
+.set-block-accordion {
+  padding-bottom: 0;
+}
+.set-accordion-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border: none;
+  background: none;
+  color: inherit;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+}
+.set-chevron {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 17px;
+  color: var(--ink-faint);
+  transition: transform 0.15s, color 0.15s;
+}
+.set-accordion-trigger:hover .set-chevron {
+  color: var(--clay-deep);
+}
+.set-chevron-open {
+  transform: rotate(180deg);
+}
 .set-label {
   display: flex;
   flex-direction: column;
