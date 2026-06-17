@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { useAction, useMutation, useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
 import type { Prefs, Theme } from "../types";
 
 interface Props {
@@ -44,6 +46,13 @@ export function SettingsModal({
   onClose,
 }: Props) {
   const [draft, setDraft] = useState("");
+  const [copied, setCopied] = useState<string | null>(null);
+  const [mcpBusy, setMcpBusy] = useState(false);
+  const [mcpEnsured, setMcpEnsured] = useState(false);
+  const mcpAccess = useQuery(api.mcp.getAccess);
+  const ensureMcpKey = useAction(api.mcp.ensureKey);
+  const rotateMcpKey = useAction(api.mcp.rotateKey);
+  const revokeMcpKey = useMutation(api.mcp.revokeKey);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -53,12 +62,54 @@ export function SettingsModal({
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
 
+  useEffect(() => {
+    if (mcpAccess && !mcpAccess.key && !mcpEnsured) {
+      setMcpEnsured(true);
+      void ensureMcpKey({});
+    }
+  }, [ensureMcpKey, mcpAccess, mcpEnsured]);
+
   const addTag = () => {
     onAddTaskTag(draft);
     setDraft("");
   };
 
+  const copy = async (label: string, text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(`${label} copied`);
+    } catch {
+      setCopied("Copy failed");
+    }
+    window.setTimeout(() => setCopied(null), 1400);
+  };
+
+  const rotate = async () => {
+    setMcpBusy(true);
+    try {
+      await rotateMcpKey({});
+      setCopied("Key rotated");
+    } finally {
+      setMcpBusy(false);
+      window.setTimeout(() => setCopied(null), 1400);
+    }
+  };
+
+  const revoke = async () => {
+    setMcpBusy(true);
+    try {
+      await revokeMcpKey({});
+      setCopied("Key revoked");
+    } finally {
+      setMcpBusy(false);
+      window.setTimeout(() => setCopied(null), 1400);
+    }
+  };
+
   const suggestions = knownTags.filter((t) => !prefs.taskTags.includes(t));
+  const mcpKey = mcpAccess?.key?.secret ?? "";
+  const keyDisplay = mcpAccess ? mcpKey || "No active key" : "Loading...";
+  const bearerHeader = mcpKey ? `Authorization: Bearer ${mcpKey}` : "";
 
   return (
     <div className="modal-overlay" onMouseDown={onClose}>
@@ -140,6 +191,66 @@ export function SettingsModal({
             <button className="ghost-btn" onClick={addTag}>
               Add
             </button>
+          </div>
+        </div>
+
+        <div className="set-block">
+          <div className="set-label">
+            MCP access
+            <span className="set-sub">Remote LLM access to your visible Titan entries.</span>
+          </div>
+          <div className="mcp-panel">
+            <label className="mcp-field">
+              <span>Endpoint</span>
+              <div className="mcp-copyrow">
+                <input readOnly value={mcpAccess?.endpoint ?? "Loading..."} />
+                <button
+                  className="ghost-btn"
+                  onClick={() => mcpAccess?.endpoint && copy("Endpoint", mcpAccess.endpoint)}
+                  disabled={!mcpAccess?.endpoint}
+                >
+                  Copy
+                </button>
+              </div>
+            </label>
+
+            <label className="mcp-field">
+              <span>Bearer key</span>
+              <div className="mcp-copyrow">
+                <input readOnly value={keyDisplay} />
+                <button
+                  className="ghost-btn"
+                  onClick={() => mcpKey && copy("Key", mcpKey)}
+                  disabled={!mcpKey || mcpBusy}
+                >
+                  Copy
+                </button>
+              </div>
+            </label>
+
+            <label className="mcp-field">
+              <span>Header</span>
+              <div className="mcp-copyrow">
+                <input readOnly value={bearerHeader || "Authorization: Bearer ..."} />
+                <button
+                  className="ghost-btn"
+                  onClick={() => bearerHeader && copy("Header", bearerHeader)}
+                  disabled={!bearerHeader || mcpBusy}
+                >
+                  Copy
+                </button>
+              </div>
+            </label>
+
+            <div className="mcp-actions">
+              <button className="ghost-btn" onClick={rotate} disabled={mcpBusy}>
+                Rotate key
+              </button>
+              <button className="ghost-btn" onClick={revoke} disabled={!mcpKey || mcpBusy}>
+                Revoke
+              </button>
+              {copied && <span className="mcp-status">{copied}</span>}
+            </div>
           </div>
         </div>
 

@@ -100,6 +100,8 @@ for a personal dev deployment.
   `https://abundant-jaguar-978.convex.site/api/auth/callback/github`.
 - CI/CD: push to `main` → Convex deploy + Vercel build/deploy (5 GitHub secrets set).
 - Custom domain `www.usetitan.xyz` attached to the Vercel project.
+- `/mcp` rewrites from Vercel to the prod Convex HTTP action at
+  `https://robust-grasshopper-674.convex.site/mcp`.
 
 ## A. GitHub OAuth reference (already configured)
 

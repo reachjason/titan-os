@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
+import { useMutation, useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
 import type { Prefs } from "../types";
 import { config } from "../config";
 
@@ -19,12 +21,27 @@ function load(): Prefs {
   }
 }
 
+function sameTags(a: string[], b: string[]): boolean {
+  return a.length === b.length && a.every((tag, index) => tag === b[index]);
+}
+
 export function usePrefs() {
   const [prefs, setPrefs] = useState<Prefs>(load);
+  const remoteSettings = useQuery(api.mcp.getUserSettings);
+  const updateTaskTags = useMutation(api.mcp.updateTaskTags);
 
   useEffect(() => {
     localStorage.setItem(KEY, JSON.stringify(prefs));
   }, [prefs]);
+
+  useEffect(() => {
+    if (!remoteSettings?.taskTags) return;
+    setPrefs((p) =>
+      sameTags(p.taskTags, remoteSettings.taskTags)
+        ? p
+        : { ...p, taskTags: remoteSettings.taskTags }
+    );
+  }, [remoteSettings?.taskTags]);
 
   const toggleTimestamps = useCallback(
     () => setPrefs((p) => ({ ...p, showTimestamps: !p.showTimestamps })),
@@ -46,15 +63,22 @@ export function usePrefs() {
   const addTaskTag = useCallback((tag: string) => {
     const t = tag.trim().toLowerCase().replace(/^\//, "");
     if (!t) return;
-    setPrefs((p) =>
-      p.taskTags.includes(t) ? p : { ...p, taskTags: [...p.taskTags, t] }
-    );
-  }, []);
+    setPrefs((p) => {
+      if (p.taskTags.includes(t)) return p;
+      const taskTags = [...p.taskTags, t];
+      void updateTaskTags({ taskTags });
+      return { ...p, taskTags };
+    });
+  }, [updateTaskTags]);
 
   const removeTaskTag = useCallback(
     (tag: string) =>
-      setPrefs((p) => ({ ...p, taskTags: p.taskTags.filter((t) => t !== tag) })),
-    []
+      setPrefs((p) => {
+        const taskTags = p.taskTags.filter((t) => t !== tag);
+        void updateTaskTags({ taskTags });
+        return { ...p, taskTags };
+      }),
+    [updateTaskTags]
   );
 
   return {

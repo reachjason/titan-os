@@ -12,6 +12,9 @@ import type * as auth from "../auth.js";
 import type * as entries from "../entries.js";
 import type * as http from "../http.js";
 import type * as lib from "../lib.js";
+import type * as mcp from "../mcp.js";
+import type * as mcpHttp from "../mcpHttp.js";
+import type * as mcpShared from "../mcpShared.js";
 import type * as users from "../users.js";
 
 import type {
@@ -25,6 +28,9 @@ declare const fullApi: ApiFromModules<{
   entries: typeof entries;
   http: typeof http;
   lib: typeof lib;
+  mcp: typeof mcp;
+  mcpHttp: typeof mcpHttp;
+  mcpShared: typeof mcpShared;
   users: typeof users;
 }>;
 

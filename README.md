@@ -115,6 +115,25 @@ convex/
 - **Edit / delete:** hover a row for ✎ / ✕.
 - **Settings (`settings`):** dark mode, show/hide timestamps, task tags, export/import JSON, keyboard shortcuts.
 
+### MCP access
+
+Settings also exposes a Titan MCP key for remote LLM clients. Use the branded
+endpoint with a bearer header:
+
+```text
+POST https://www.usetitan.xyz/mcp
+Authorization: Bearer <Titan MCP key>
+```
+
+The dev Convex endpoint is:
+
+```text
+https://abundant-jaguar-978.convex.site/mcp
+```
+
+MCP keys are intentionally shown in plaintext in Settings so they can be copied
+later; rotate or revoke the key from the same panel if it is shared too widely.
+
 ### Keyboard shortcuts (press `?` for the in-app list)
 
 | Key           | Action                          |
