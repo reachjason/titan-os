@@ -12,7 +12,12 @@ import "./styles.css";
 applyTheme(getInitialTheme());
 document.title = config.brand.name;
 
-const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
+const convexUrl = import.meta.env.VITE_CONVEX_URL;
+if (!convexUrl) {
+  throw new Error("Missing VITE_CONVEX_URL. Run `npm run dev` so Convex configures .env.local.");
+}
+
+const convex = new ConvexReactClient(convexUrl);
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

@@ -18,6 +18,7 @@ interface Props {
   taskTags: string[];
   showTime: boolean;
   showTags: boolean;
+  highlightedEntryId?: string | null;
   onTagClick: (tag: string) => void;
   onMentionClick: (name: string) => void;
   onEdit: (id: string, raw: string) => void;
@@ -71,6 +72,7 @@ export function Feed(props: Props) {
     taskTags,
     showTime,
     showTags,
+    highlightedEntryId,
     onTagClick,
     onMentionClick,
     onEdit,
@@ -105,6 +107,7 @@ export function Feed(props: Props) {
       checkable={isTask(entry.tags, taskTags) || !!entry.done}
       showTime={minimal ? false : showTime}
       hideTags={!showTags}
+      highlighted={entry.id === highlightedEntryId}
       onTagClick={onTagClick}
       onMentionClick={onMentionClick}
       onEdit={onEdit}

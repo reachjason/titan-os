@@ -87,8 +87,13 @@ function Workspace() {
   const [filterOpen, setFilterOpen] = useState(false);
   const [focus, setFocus] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [highlightedEntryId, setHighlightedEntryId] = useState<string | null>(null);
+  const [pendingOpenId, setPendingOpenId] = useState<string | null>(null);
+  const [feedScrolling, setFeedScrolling] = useState(false);
   const barRef = useRef<TerminalBarHandle>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const highlightTimer = useRef<number | undefined>(undefined);
+  const feedScrollTimer = useRef<number | undefined>(undefined);
   // Pending leader key for two-stroke chords (t c / t t), reset after a short window.
   const chordRef = useRef<string | null>(null);
   const chordTimer = useRef<number | undefined>(undefined);
@@ -129,6 +134,7 @@ function Workspace() {
   }, [entries, filter]);
 
   const filtering = filter.tags.length > 0 || filter.mentions.length > 0;
+  const activeFilterCount = filter.tags.length + filter.mentions.length;
 
   const toggleTag = (tag: string) =>
     setFilter((f) => ({
@@ -148,16 +154,45 @@ function Workspace() {
   const toggleMatch = () =>
     setFilter((f) => ({ ...f, match: f.match === "any" ? "all" : "any" }));
 
+  useEffect(() => {
+    if (!pendingOpenId || view !== "list" || focus) return;
+    const id = pendingOpenId;
+    const raf = window.requestAnimationFrame(() => {
+      const row = document.querySelector<HTMLElement>(`[data-entry-id="${id}"]`);
+      if (!row) {
+        setPendingOpenId(null);
+        return;
+      }
+      row.scrollIntoView({ block: "center", behavior: "smooth" });
+      setHighlightedEntryId(id);
+      window.clearTimeout(highlightTimer.current);
+      highlightTimer.current = window.setTimeout(() => {
+        setHighlightedEntryId((current) => (current === id ? null : current));
+      }, 1500);
+      setPendingOpenId(null);
+    });
+    return () => window.cancelAnimationFrame(raf);
+  }, [pendingOpenId, view, focus, pinnedCollapsed]);
+
+  useEffect(() => {
+    return () => {
+      window.clearTimeout(highlightTimer.current);
+      window.clearTimeout(feedScrollTimer.current);
+    };
+  }, []);
+
   // Global keyboard shortcuts.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
-      const typing = target.tagName === "INPUT" || target.tagName === "TEXTAREA";
+      const typing =
+        target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable;
       if (e.key === "Escape") {
         if (spotOpen) setSpotOpen(false);
         else if (settingsOpen) setSettingsOpen(false);
         else if (helpOpen) setHelpOpen(false);
         else if (accountOpen) setAccountOpen(false);
+        else if (filterOpen) setFilterOpen(false);
         else if (focus) setFocus(false);
         else if (filtering) clearFilters();
         return;
@@ -165,10 +200,33 @@ function Workspace() {
       if (typing) return;
       const k = e.key.toLowerCase();
 
+      if (spotOpen || settingsOpen || helpOpen || accountOpen) return;
+
       // Shift+F → Spotlight search.
       if (e.shiftKey && k === config.shortcuts.search) {
         e.preventDefault();
+        setFilterOpen(false);
         setSpotOpen(true);
+        return;
+      }
+
+      if (k === "1") {
+        e.preventDefault();
+        setView("list");
+        return;
+      }
+
+      if (k === "2") {
+        e.preventDefault();
+        setView("board");
+        setFilterOpen(false);
+        return;
+      }
+
+      // F → filter menu. Enter can then toggle multiple tags; Esc closes it.
+      if (k === config.shortcuts.search) {
+        e.preventDefault();
+        setFilterOpen((open) => !open);
         return;
       }
 
@@ -226,6 +284,7 @@ function Workspace() {
     settingsOpen,
     helpOpen,
     accountOpen,
+    filterOpen,
     toggleTimestamps,
     toggleTags,
   ]);
@@ -267,6 +326,13 @@ function Workspace() {
     flash(tag ? `Logged /${tag[1].toLowerCase()}` : "Logged");
   };
 
+  const handleFeedScroll = () => {
+    setFeedScrolling(true);
+    window.clearTimeout(feedScrollTimer.current);
+    feedScrollTimer.current = window.setTimeout(() => setFeedScrolling(false), 750);
+  };
+  const feedAreaClass = `feed-area${feedScrolling ? " feed-area-scrolling" : ""}`;
+
   return (
     <ThemeContext.Provider value={theme}>
       <div className="app">
@@ -307,47 +373,45 @@ function Workspace() {
             </div>
           )}
 
-          {view === "list" && (
-            <div className="filter-wrap">
-              <button
-                className={`filter-trigger${filter.tags.length ? " filter-on" : ""}`}
-                onClick={() => setFilterOpen((o) => !o)}
-                title="Filter by tag"
-                aria-label="Filter by tag"
-                aria-expanded={filterOpen}
+          <div className="filter-wrap">
+            <button
+              className={`filter-trigger${filtering ? " filter-on" : ""}`}
+              onClick={() => setFilterOpen((o) => !o)}
+              title="Filter by tag (F)"
+              aria-label="Filter by tag"
+              aria-expanded={filterOpen}
+            >
+              <svg
+                className="filter-glyph"
+                viewBox="0 0 16 16"
+                width="13"
+                height="13"
+                aria-hidden="true"
               >
-                <svg
-                  className="filter-glyph"
-                  viewBox="0 0 16 16"
-                  width="13"
-                  height="13"
-                  aria-hidden="true"
-                >
-                  <path
-                    fill="currentColor"
-                    d="M1.5 2.5h13a.5.5 0 0 1 .4.8L10 9.2V14a.5.5 0 0 1-.74.44l-2.5-1.4A.5.5 0 0 1 6.5 12.6V9.2L1.1 3.3a.5.5 0 0 1 .4-.8Z"
-                  />
-                </svg>
-                {filter.tags.length > 0 && (
-                  <span className="filter-count">{filter.tags.length}</span>
-                )}
-              </button>
-              {filterOpen && (
-                <FilterMenu
-                  tags={knownTags}
-                  active={filter.tags}
-                  match={filter.match}
-                  onToggle={toggleTag}
-                  onToggleMatch={toggleMatch}
-                  onClear={() => {
-                    clearFilters();
-                    setFilterOpen(false);
-                  }}
-                  onClose={() => setFilterOpen(false)}
+                <path
+                  fill="currentColor"
+                  d="M1.5 2.5h13a.5.5 0 0 1 .4.8L10 9.2V14a.5.5 0 0 1-.74.44l-2.5-1.4A.5.5 0 0 1 6.5 12.6V9.2L1.1 3.3a.5.5 0 0 1 .4-.8Z"
                 />
+              </svg>
+              {activeFilterCount > 0 && (
+                <span className="filter-count">{activeFilterCount}</span>
               )}
-            </div>
-          )}
+            </button>
+            {filterOpen && (
+              <FilterMenu
+                tags={knownTags}
+                active={filter.tags}
+                match={filter.match}
+                onToggle={toggleTag}
+                onToggleMatch={toggleMatch}
+                onClear={() => {
+                  clearFilters();
+                  setFilterOpen(false);
+                }}
+                onClose={() => setFilterOpen(false)}
+              />
+            )}
+          </div>
 
           <div className="bar-spacer" />
 
@@ -445,7 +509,7 @@ function Workspace() {
         )}
 
         {view === "board" ? (
-          <main className="feed-area">
+          <main className={feedAreaClass} onScroll={handleFeedScroll}>
             <Board
               entries={filtered}
               onMove={(id, status, order) => moveCard(id, status, order, prefs.taskTags)}
@@ -466,6 +530,7 @@ function Workspace() {
                 taskTags={prefs.taskTags}
                 showTime={prefs.showTimestamps}
                 showTags={prefs.showTags}
+                highlightedEntryId={highlightedEntryId}
                 onTagClick={toggleTag}
                 onMentionClick={toggleMention}
                 onEdit={update}
@@ -475,7 +540,7 @@ function Workspace() {
               />
             )}
 
-            <main className="feed-area">
+            <main className={feedAreaClass} onScroll={handleFeedScroll}>
               <Feed
                 entries={focus ? entries : filtered}
                 sort={sort}
@@ -486,6 +551,7 @@ function Workspace() {
                 taskTags={prefs.taskTags}
                 showTime={prefs.showTimestamps}
                 showTags={prefs.showTags}
+                highlightedEntryId={highlightedEntryId}
                 onTagClick={toggleTag}
                 onMentionClick={toggleMention}
                 onEdit={update}
@@ -512,11 +578,14 @@ function Workspace() {
           <Spotlight
             entries={entries}
             onPick={(e) => {
+              setFilterOpen(false);
               clearFilters();
               setFocus(false);
               setView("list");
-              // Briefly highlight the picked entry via search-style mark.
-              flash(`/${e.tags[0] ?? "note"} · ${e.body.slice(0, 28) || "entry"}`);
+              if (e.pinned) setPinnedCollapsed(false);
+              setHighlightedEntryId(e.id);
+              setPendingOpenId(e.id);
+              flash(`Opened /${e.tags[0] ?? "note"} · ${e.body.slice(0, 28) || "entry"}`);
             }}
             onClose={() => setSpotOpen(false)}
           />

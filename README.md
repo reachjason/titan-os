@@ -9,24 +9,58 @@ private to your account and synced via Convex.
 
 ---
 
-## Onboarding (clone → run in ~1 minute)
+## Onboarding (clone -> run locally)
 
-Everything you need is in the repo. **No accounts, keys, or env setup required to
-run locally** — the committed `.env` already points at the production backend.
+Local development uses a separate Convex dev deployment, so local testing no
+longer writes to production data.
 
 ```bash
 git clone git@github.com:reachjason/titan-os.git
 cd titan-os
 npm install
-npm run dev          # → http://localhost:5173
+cp .env.local.example .env.local
+npm run dev          # Convex dev + Vite -> http://127.0.0.1:5173
 ```
 
-Open it, click **Continue with GitHub**, and you'll see your own (empty) log.
-Running locally talks to the **same production Convex backend** as the live site,
-so be mindful: local edits hit real data (scoped to your own GitHub account).
+`npm run dev` runs `convex dev --start "vite --host 127.0.0.1"`. It selects the
+dev deployment from `.env.local`, pushes local Convex functions/schema there, and
+starts the frontend against the dev database.
 
-> Using an AI agent (e.g. Claude Code)? Just say "run the app" — it knows the setup
-> from `CLAUDE.md`.
+Current local dev backend:
+
+- Convex dev Cloud URL: `https://abundant-jaguar-978.convex.cloud`
+- Convex dev Site/OAuth callback host: `https://abundant-jaguar-978.convex.site`
+- GitHub OAuth callback:
+  `https://abundant-jaguar-978.convex.site/api/auth/callback/github`
+
+### What other contributors need
+
+For normal local testing, a contributor only needs:
+
+- repo access,
+- Node/npm,
+- a GitHub account for sign-in,
+- `.env.local` copied from `.env.local.example`.
+
+That path uses the shared dev Convex deployment and its already-configured
+GitHub OAuth app. They do **not** need to create a GitHub OAuth app or set Convex
+Auth env vars just to run the app locally.
+
+For backend work in `convex/`, they also need access to the `viral-sangani /
+titan-os` Convex project so `npm run dev` can push functions/schema to the dev
+deployment. Without Convex project access, they can still run the frontend only:
+
+```bash
+npm run dev:frontend
+```
+
+If someone wants a private dev database instead of the shared dev database, they
+need their own Convex dev deployment plus their own GitHub OAuth app, because a
+GitHub OAuth App has a single callback URL. The callback must be:
+
+```text
+https://<their-dev-deployment>.convex.site/api/auth/callback/github
+```
 
 ## Ship a change (push → it's live)
 
@@ -38,7 +72,7 @@ git commit -am "my change" && git push
 # open a PR, or push to main → GitHub Actions deploys to https://www.usetitan.xyz
 ```
 
-**Any push to `main` — by anyone — deploys automatically** (Convex backend +
+**Any push to `main` - by anyone - deploys automatically** (Convex backend +
 frontend) via GitHub Actions. No Vercel or Convex login needed to deploy; the CI
 secrets live on the repo. See `DEPLOY.md` for how the pipeline is wired.
 
@@ -47,8 +81,8 @@ secrets live on the repo. See `DEPLOY.md` for how the pipeline is wired.
 ## Architecture (1-minute mental model)
 
 - **Frontend:** React + Vite, static build hosted on Vercel.
-- **Backend:** [Convex](https://convex.dev) — real-time DB + serverless functions
-  in `convex/`. **Single production deployment, no dev** (see `CLAUDE.md`).
+- **Backend:** [Convex](https://convex.dev) - real-time DB + serverless functions
+  in `convex/`. Local development uses a separate Convex dev deployment.
 - **Auth:** Convex Auth with **GitHub**. Each user's entries are private + isolated.
 - **What's in Convex:** entries (per user). **What's local (localStorage):** theme,
   show timestamps/tags, task-tag set, sort + list/board view — per-device, instant.

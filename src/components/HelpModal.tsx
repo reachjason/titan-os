@@ -7,7 +7,10 @@ interface Props {
 const SHORTCUTS: { keys: string[]; label: string }[] = [
   { keys: ["↵"], label: "Log & clear" },
   { keys: ["/"], label: "Open tag menu" },
+  { keys: ["f"], label: "Filter menu" },
   { keys: ["⇧F"], label: "Spotlight search" },
+  { keys: ["1"], label: "List view" },
+  { keys: ["2"], label: "Board view" },
   { keys: ["esc"], label: "Dismiss / close" },
   { keys: ["v"], label: "List / Board" },
   { keys: ["p"], label: "Focus pinned" },

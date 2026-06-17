@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { chipColor } from "../commands/tagColors";
 import { useCurrentTheme } from "../store/ThemeContext";
 
@@ -27,6 +27,15 @@ export function FilterMenu({
 }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const theme = useCurrentTheme();
+  const [selected, setSelected] = useState(0);
+
+  useEffect(() => {
+    ref.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    setSelected((i) => Math.min(i, Math.max(tags.length - 1, 0)));
+  }, [tags.length]);
 
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
@@ -40,7 +49,28 @@ export function FilterMenu({
   }, [onClose]);
 
   return (
-    <div className="filter-menu" ref={ref} role="menu">
+    <div
+      className="filter-menu"
+      ref={ref}
+      role="menu"
+      tabIndex={-1}
+      aria-activedescendant={tags[selected] ? `filter-${tags[selected]}` : undefined}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") {
+          e.preventDefault();
+          onClose();
+        } else if (e.key === "ArrowDown" && tags.length > 0) {
+          e.preventDefault();
+          setSelected((i) => (i + 1) % tags.length);
+        } else if (e.key === "ArrowUp" && tags.length > 0) {
+          e.preventDefault();
+          setSelected((i) => (i - 1 + tags.length) % tags.length);
+        } else if (e.key === "Enter" && tags[selected]) {
+          e.preventDefault();
+          onToggle(tags[selected]);
+        }
+      }}
+    >
       <div className="filter-menu-head">
         <span className="filter-menu-title">Filter by tag</span>
         {active.length > 1 && (
@@ -53,14 +83,18 @@ export function FilterMenu({
         <div className="filter-menu-empty">No tags yet</div>
       ) : (
         <div className="filter-menu-list">
-          {tags.map((t) => {
+          {tags.map((t, i) => {
             const c = chipColor(t, theme);
             const on = active.includes(t);
             return (
               <button
                 key={t}
-                className={`filter-menu-item${on ? " filter-menu-item-on" : ""}`}
+                id={`filter-${t}`}
+                className={`filter-menu-item${on ? " filter-menu-item-on" : ""}${
+                  i === selected ? " filter-menu-item-active" : ""
+                }`}
                 onClick={() => onToggle(t)}
+                onPointerMove={() => setSelected(i)}
                 role="menuitemcheckbox"
                 aria-checked={on}
               >

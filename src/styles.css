@@ -196,6 +196,7 @@ body {
   padding: 8px;
   box-shadow: var(--shadow-strong);
   font-family: var(--font-body);
+  outline: none;
 }
 .filter-menu-head {
   display: flex;
@@ -244,6 +245,12 @@ body {
 }
 .filter-menu-item:hover {
   background: var(--bg-sunk);
+}
+.filter-menu-item-active {
+  background: var(--bg-sunk);
+}
+.filter-menu-item-on .filter-check {
+  color: var(--clay);
 }
 .filter-check {
   width: 13px;
@@ -470,6 +477,12 @@ body {
   flex-direction: column;
   align-items: center;
   padding: 26px 22px;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.feed-area-scrolling {
+  scrollbar-color: var(--line) transparent;
 }
 .feed {
   display: flex;
@@ -598,6 +611,23 @@ body {
 }
 .row:hover {
   background: var(--bg-sunk);
+}
+.row-highlight {
+  animation: row-open-pulse 1.5s ease-out;
+}
+@keyframes row-open-pulse {
+  0% {
+    background: color-mix(in srgb, var(--clay) 24%, transparent);
+    box-shadow: inset 0 0 0 1.5px var(--clay);
+  }
+  72% {
+    background: color-mix(in srgb, var(--clay) 12%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--clay) 65%, transparent);
+  }
+  100% {
+    background: transparent;
+    box-shadow: inset 0 0 0 1px transparent;
+  }
 }
 
 /* Leading slot (checkbox or bullet) is one text-line tall so its 17px control
@@ -1511,6 +1541,12 @@ kbd {
 .spot-input::placeholder {
   color: var(--ink-faint);
 }
+.spot-count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-faint);
+  white-space: nowrap;
+}
 .spot-esc {
   font-family: var(--font-mono);
   font-size: 11px;
@@ -1519,17 +1555,52 @@ kbd {
   border-radius: 5px;
   padding: 2px 8px;
 }
+.spot-recent {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 14px 0;
+  flex-wrap: wrap;
+}
+.spot-recent-label {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-faint);
+}
+.spot-recent-chip {
+  border: 1px solid var(--line);
+  background: var(--bg-sunk);
+  color: var(--ink-soft);
+  font-family: var(--font-body);
+  font-size: 12px;
+  border-radius: 999px;
+  padding: 3px 9px;
+  cursor: pointer;
+}
+.spot-recent-chip:hover {
+  border-color: var(--clay);
+  color: var(--clay-deep);
+}
 .spot-body {
   max-height: 344px;
   overflow-y: auto;
   padding: 8px;
 }
 .spot-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   padding: 34px;
   text-align: center;
   font-family: var(--font-display);
   font-size: 18px;
   color: var(--ink-faint);
+}
+.spot-empty small {
+  font-family: var(--font-body);
+  font-size: 13px;
 }
 .spot-row {
   display: flex;
@@ -1559,6 +1630,21 @@ kbd {
 .spot-text-done {
   text-decoration: line-through;
   color: var(--ink-faint);
+}
+.spot-row mark {
+  background: var(--mark);
+  color: inherit;
+  border-radius: 3px;
+  padding: 0 1px;
+}
+.spot-row .chip mark {
+  background: rgba(255, 255, 255, 0.35);
+}
+.spot-author {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-faint);
+  white-space: nowrap;
 }
 .spot-time {
   margin-left: auto;
@@ -1620,9 +1706,15 @@ kbd {
   width: 10px;
 }
 .feed-area::-webkit-scrollbar-thumb {
-  background: var(--line);
+  background: transparent;
   border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+.feed-area-scrolling::-webkit-scrollbar-thumb {
+  background: var(--line);
   border: 3px solid var(--bg);
+  background-clip: border-box;
 }
 .spot-body::-webkit-scrollbar {
   width: 8px;
@@ -1752,6 +1844,21 @@ kbd {
   }
   .filter-bar {
     padding: 9px 14px;
+  }
+  .spot-head {
+    gap: 10px;
+    padding: 14px;
+  }
+  .spot-input {
+    min-width: 0;
+    font-size: 18px;
+  }
+  .spot-count,
+  .spot-foot-end {
+    display: none;
+  }
+  .spot-author {
+    display: none;
   }
   .pin-notch,
   .pin-notch-collapsed {

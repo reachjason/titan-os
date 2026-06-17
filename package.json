@@ -4,12 +4,16 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "convex dev --start \"vite --host 127.0.0.1\"",
+    "dev:frontend": "vite --host 127.0.0.1",
+    "dev:convex": "convex dev",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "convex:deploy": "convex deploy",
     "convex:env": "convex env",
+    "convex:env:prod": "convex env --prod",
     "convex:logs": "convex logs",
+    "convex:logs:prod": "convex logs --prod",
     "convex:dashboard": "convex dashboard"
   },
   "dependencies": {

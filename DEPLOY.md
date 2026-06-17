@@ -1,28 +1,91 @@
-# Titan OS — Deployment (PROD-ONLY)
+# Titan OS - Deployment
 
 **Live:** https://www.usetitan.xyz — deployed on every push to `main` via GitHub
 Actions (`.github/workflows/deploy.yml`). Fully working end-to-end: custom domain →
 Vercel frontend → Convex backend → GitHub auth → per-user data.
 
-This project uses a **single Convex deployment: production** (`robust-grasshopper-674`).
-There is no dev deployment — see `CLAUDE.md`. Entries live in Convex, scoped per
-GitHub user; theme/prefs/sort+view stay in `localStorage` (per-device).
+This project now uses separate Convex deployments for local development and
+production. Entries live in Convex, scoped per GitHub user; theme/prefs/sort+view
+stay in `localStorage` (per-device).
 
 - Production site: `https://www.usetitan.xyz`
 - Convex prod Cloud URL: `https://robust-grasshopper-674.convex.cloud`
 - Convex prod Site URL (OAuth callbacks): `https://robust-grasshopper-674.convex.site`
-- `.env.local` (gitignored) pins the CLI + frontend to prod:
+- Convex dev Cloud URL: `https://abundant-jaguar-978.convex.cloud`
+- Convex dev Site URL (OAuth callbacks): `https://abundant-jaguar-978.convex.site`
+- `.env.local` (gitignored) pins the CLI + frontend to dev:
   ```
-  CONVEX_DEPLOYMENT=prod:robust-grasshopper-674
-  VITE_CONVEX_URL=https://robust-grasshopper-674.convex.cloud
-  VITE_CONVEX_SITE_URL=https://robust-grasshopper-674.convex.site
+  CONVEX_DEPLOYMENT=dev:abundant-jaguar-978
+  VITE_CONVEX_URL=https://abundant-jaguar-978.convex.cloud
+  VITE_CONVEX_SITE_URL=https://abundant-jaguar-978.convex.site
   ```
-  Because `CONVEX_DEPLOYMENT` targets prod, **no `--prod` flag is needed** on any
-  `convex` command.
+- `.env.local.example` is committed with the shared dev values; new contributors
+  should copy it to `.env.local`.
+- `.env.prod.local` is a gitignored local backup with prod values for maintenance.
+
+Local commands:
+
+```bash
+npm run dev                # Convex dev watcher + Vite
+npm run convex:env -- list # dev env vars
+npm run convex:logs        # dev logs
+```
+
+Production commands:
+
+```bash
+npm run convex:env:prod -- list
+npm run convex:logs:prod
+npm run convex:deploy
+```
 
 ---
 
-## ✅ Done & verified (full stack is live)
+## Contributor local setup
+
+Most contributors can use the shared dev deployment:
+
+```bash
+npm install
+cp .env.local.example .env.local
+npm run dev
+```
+
+They need repo access, Node/npm, and a GitHub account for signing in. They do not
+need to create GitHub OAuth credentials for the shared dev deployment.
+
+To change or test files in `convex/`, they also need access to the Convex project
+`viral-sangani/titan-os`; otherwise `convex dev` cannot push functions/schema.
+Frontend-only local work can run with:
+
+```bash
+npm run dev:frontend
+```
+
+If a contributor wants their own isolated dev database instead of the shared dev
+deployment, they must create/select their own Convex dev deployment and configure
+Convex Auth env vars there:
+
+```bash
+npx convex deployment select dev
+npx convex dev --once
+npx @convex-dev/auth --web-server-url http://localhost:5173
+npx convex env set AUTH_GITHUB_ID <client-id>
+npx convex env set AUTH_GITHUB_SECRET <client-secret>
+```
+
+They also need a GitHub OAuth App whose callback is:
+
+```text
+https://<their-dev-deployment>.convex.site/api/auth/callback/github
+```
+
+GitHub OAuth Apps only have one callback URL, so do not reuse the prod OAuth app
+for a personal dev deployment.
+
+---
+
+## Done & verified
 
 - Prod Convex deployment created; schema + functions + auth tables deployed.
 - Prod auth keys generated (`JWT_PRIVATE_KEY`, `JWKS`).
@@ -30,6 +93,11 @@ GitHub user; theme/prefs/sort+view stay in `localStorage` (per-device).
   `SITE_URL=https://www.usetitan.xyz`.
 - GitHub OAuth app callback → `https://robust-grasshopper-674.convex.site/api/auth/callback/github`.
 - GitHub login → create / persist / delete entry all verified on prod.
+- Dev Convex deployment selected locally: `abundant-jaguar-978`.
+- Dev Convex env set: `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`,
+  `SITE_URL=http://localhost:5173`, `JWT_PRIVATE_KEY`, `JWKS`.
+- Dev GitHub OAuth callback reaches GitHub login:
+  `https://abundant-jaguar-978.convex.site/api/auth/callback/github`.
 - CI/CD: push to `main` → Convex deploy + Vercel build/deploy (5 GitHub secrets set).
 - Custom domain `www.usetitan.xyz` attached to the Vercel project.
 
@@ -106,11 +174,11 @@ push to `main` it:
 
 ## Notes
 
-- **Single GitHub OAuth app** — its callback must be the prod `.site` host. A
-  callback mismatch is the #1 cause of a redirect error after authorizing.
+- Use separate GitHub OAuth apps for dev and prod. GitHub OAuth Apps support only
+  one callback URL, so sharing one app across environments is fragile.
 - `convex/_generated/` is committed so CI builds resolve `api` without `convex dev`.
 - **Secrets** are set by you (`npx convex env set`, GitHub repo secrets) — never
-  committed (`.env.local`, `.vercel/` are gitignored).
+  committed (`.env.local`, `.env.prod.local`, `.vercel/` are gitignored).
 - **No seed / no import** — a brand-new GitHub account sees the "Your log is empty."
   first-run state. Export/Import JSON in Settings still works.
 - Each GitHub user's entries are fully isolated (auth-gated + per-row ownership).

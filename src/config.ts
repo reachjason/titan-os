@@ -118,6 +118,8 @@ export const config = {
     themeKey: "titan-os.theme",
     /** Remembers sort mode + match mode across reloads. */
     viewKey: "titan-os.view.v1",
+    /** Remembers recent Spotlight searches on this device. */
+    searchRecentKey: "titan-os.search.recent.v1",
     /** Remembers preferences (timestamps, task tags). */
     prefsKey: "titan-os.prefs.v1",
   },

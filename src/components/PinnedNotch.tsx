@@ -11,6 +11,7 @@ interface Props {
   taskTags: string[];
   showTime: boolean;
   showTags: boolean;
+  highlightedEntryId?: string | null;
   onTagClick: (tag: string) => void;
   onMentionClick: (name: string) => void;
   onEdit: (id: string, raw: string) => void;
@@ -29,6 +30,7 @@ export function PinnedNotch({
   taskTags,
   showTime,
   showTags,
+  highlightedEntryId,
   onTagClick,
   onMentionClick,
   onEdit,
@@ -62,6 +64,7 @@ export function PinnedNotch({
             checkable={isTask(e.tags, taskTags) || !!e.done}
             showTime={showTime}
             hideTags={!showTags}
+            highlighted={e.id === highlightedEntryId}
             onTagClick={onTagClick}
             onMentionClick={onMentionClick}
             onEdit={onEdit}

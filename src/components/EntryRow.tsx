@@ -13,6 +13,8 @@ interface Props {
   showTime: boolean;
   /** Hide tag chips (used in focus mode for a clean view). */
   hideTags?: boolean;
+  /** Briefly pulse this row after opening it from Spotlight. */
+  highlighted?: boolean;
   /** Active @mention filters, for highlighting. */
   activeMentions: string[];
   onTagClick: (tag: string) => void;
@@ -34,6 +36,7 @@ export function EntryRow({
   checkable,
   showTime,
   hideTags,
+  highlighted,
   activeMentions,
   onTagClick,
   onMentionClick,
@@ -72,7 +75,10 @@ export function EntryRow({
 
   if (editing) {
     return (
-      <div className="row row-editing">
+      <div
+        className={`row row-editing${highlighted ? " row-highlight" : ""}`}
+        data-entry-id={entry.id}
+      >
         <textarea
           ref={inputRef}
           className="row-edit"
@@ -100,7 +106,12 @@ export function EntryRow({
   const done = !!entry.done;
 
   return (
-    <div className={`row${done ? " row-done" : ""}${entry.pinned ? " row-pinned" : ""}`}>
+    <div
+      className={`row${done ? " row-done" : ""}${entry.pinned ? " row-pinned" : ""}${
+        highlighted ? " row-highlight" : ""
+      }`}
+      data-entry-id={entry.id}
+    >
       {checkable ? (
         <button
           className={`check${done ? " check-on" : ""}`}
