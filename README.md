@@ -117,22 +117,78 @@ convex/
 
 ### MCP access
 
-Settings also exposes a Titan MCP key for remote LLM clients. Use the branded
-endpoint with a bearer header:
+Settings exposes a Titan MCP key for remote LLM clients. Open
+`settings` -> `MCP access`, copy the endpoint and bearer header, then add them
+to any MCP client that supports remote Streamable HTTP servers.
+
+Production endpoint:
 
 ```text
-POST https://www.usetitan.xyz/mcp
+https://www.usetitan.xyz/mcp
+```
+
+Authentication:
+
+```text
 Authorization: Bearer <Titan MCP key>
 ```
 
-The dev Convex endpoint is:
+Do not put the key in the URL. Requests like `?api-key=...` are rejected because
+query-string secrets can leak through logs, browser history, and referrers.
+
+Generic remote MCP config shape:
+
+```json
+{
+  "mcpServers": {
+    "titan-os": {
+      "type": "http",
+      "url": "https://www.usetitan.xyz/mcp",
+      "headers": {
+        "Authorization": "Bearer <Titan MCP key>"
+      }
+    }
+  }
+}
+```
+
+Some clients name the transport `streamable-http` instead of `http`, or ask for
+the header in a separate UI field. Use the same URL and bearer header either way.
+
+Smoke test a key:
+
+```bash
+curl https://www.usetitan.xyz/mcp \
+  -H "Authorization: Bearer <Titan MCP key>" \
+  -H "Content-Type: application/json" \
+  --data '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}'
+```
+
+Expected result: a JSON-RPC response with `serverInfo.name` set to `titan-os`.
+
+Available tools:
+
+- `titan_profile_get` - profile, task tags, and entry counts.
+- `titan_entries_search` - detailed search over visible entries.
+- `titan_entry_get` - fetch one visible entry by id.
+- `titan_tags_list` - tag counts and recent usage.
+- `titan_collaborators_list` - collaborators visible through shared entries.
+- `titan_entry_create` - create a new entry.
+- `titan_entry_update_text` - replace entry text and reparse tags/mentions.
+- `titan_entry_set_state` - update status, done, pinned, or order.
+
+The MCP server can also list/read entry resources as `titan://entry/<id>`.
+
+Access scope matches the app: the key can see entries authored by that user plus
+entries where that user is mentioned. MCP keys are intentionally shown in
+plaintext in Settings so they can be copied later; rotate or revoke the key from
+the same panel if it is shared too widely.
+
+Dev endpoint:
 
 ```text
 https://abundant-jaguar-978.convex.site/mcp
 ```
-
-MCP keys are intentionally shown in plaintext in Settings so they can be copied
-later; rotate or revoke the key from the same panel if it is shared too widely.
 
 ### Keyboard shortcuts (press `?` for the in-app list)
 
