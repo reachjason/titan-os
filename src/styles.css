@@ -478,6 +478,36 @@ body {
   font-size: 12px;
   text-decoration: underline;
 }
+/* Active free-text search reads as a removable chip in the filter bar. */
+.search-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 1px 9px 1px 7px;
+  border: 1px solid var(--line);
+  background: var(--bg-raised);
+  color: var(--ink-soft);
+  border-radius: 999px;
+  font-size: 12.5px;
+  cursor: pointer;
+  max-width: 280px;
+}
+.search-chip:hover {
+  border-color: var(--clay);
+  color: var(--clay-deep);
+}
+.search-chip-glyph {
+  font-size: 13px;
+}
+.search-chip-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.search-chip-x {
+  font-size: 10px;
+  opacity: 0.7;
+}
 
 /* Tag-group headers when sorting "by tag". */
 .tag-divider {
@@ -1731,6 +1761,22 @@ kbd {
 }
 .spot-row-tag .spot-text {
   color: var(--ink-soft);
+}
+.spot-row-all .spot-text {
+  font-weight: 600;
+  color: var(--ink);
+}
+.spot-all-glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: var(--bg-sunk);
+  color: var(--clay);
+  font-size: 13px;
+  flex-shrink: 0;
 }
 .spot-text {
   flex: 1;

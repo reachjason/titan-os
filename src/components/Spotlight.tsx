@@ -8,8 +8,12 @@ import { highlightParts, searchEntries, type HighlightRange } from "../lib/spotl
 
 interface Props {
   entries: Entry[];
+  /** Seed the search box (e.g. with the feed's active query). */
+  initialQuery?: string;
   /** Jump to an entry (e.g. clear filters + scroll). */
   onPick?: (entry: Entry) => void;
+  /** Show every match in the feed as a persistent search-results view. */
+  onSeeAll?: (query: string) => void;
   /** Apply a tag filter (show all entries with this tag). */
   onPickTag?: (tag: string) => void;
   /** Apply a people filter (show all entries mentioning this person). */
@@ -19,8 +23,9 @@ interface Props {
   onClose: () => void;
 }
 
-/** A search row: a tag-filter shortcut, a people-filter shortcut, or an entry. */
+/** A search row: see-all, a tag/people-filter shortcut, or a matched entry. */
 type Row =
+  | { kind: "all"; count: number }
   | { kind: "tag"; tag: string; count: number }
   | { kind: "person"; key: string; label: string; image?: string; count: number }
   | { kind: "entry"; result: ReturnType<typeof searchEntries>[number] };
@@ -55,9 +60,18 @@ function renderMarked(text: string, ranges: HighlightRange[]) {
 }
 
 /** macOS-Spotlight-style search palette: ⇧F opens, live filter, esc closes. */
-export function Spotlight({ entries, onPick, onPickTag, onPickMention, peopleInfo, onClose }: Props) {
+export function Spotlight({
+  entries,
+  initialQuery = "",
+  onPick,
+  onSeeAll,
+  onPickTag,
+  onPickMention,
+  peopleInfo,
+  onClose,
+}: Props) {
   const theme = useCurrentTheme();
-  const [q, setQ] = useState("");
+  const [q, setQ] = useState(initialQuery);
   const [sel, setSel] = useState(0);
   const [recent, setRecent] = useState<string[]>(loadRecentSearches);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -112,9 +126,12 @@ export function Spotlight({ entries, onPick, onPickTag, onPickMention, peopleInf
   const tagMatches = useMemo(() => byQuery(tagCounts), [tagCounts, q]);
   const mentionMatches = useMemo(() => byQuery(mentionCounts), [mentionCounts, q]);
 
-  // Tag + people shortcuts sit above entry matches; all share one cursor.
+  // "See all matches" leads the list (default cursor) so Enter shows the full
+  // result set in the feed; tag/people shortcuts and entry matches follow.
+  const term = q.trim();
   const rows: Row[] = useMemo(
     () => [
+      ...(onSeeAll && term && results.length > 0 ? [{ kind: "all" as const, count: results.length }] : []),
       ...(onPickTag ? tagMatches.map((tag) => ({ kind: "tag" as const, tag, count: tagCounts[tag] })) : []),
       ...(onPickMention
         ? mentionMatches.map((key) => ({
@@ -127,7 +144,7 @@ export function Spotlight({ entries, onPick, onPickTag, onPickMention, peopleInf
         : []),
       ...results.map((result) => ({ kind: "entry" as const, result })),
     ],
-    [onPickTag, onPickMention, tagMatches, mentionMatches, tagCounts, mentionCounts, peopleInfo, results]
+    [onSeeAll, term, onPickTag, onPickMention, tagMatches, mentionMatches, tagCounts, mentionCounts, peopleInfo, results]
   );
 
   useEffect(() => setSel(0), [q]);
@@ -158,8 +175,15 @@ export function Spotlight({ entries, onPick, onPickTag, onPickMention, peopleInf
     onClose();
   };
 
+  const seeAll = () => {
+    remember();
+    onSeeAll?.(term);
+    onClose();
+  };
+
   const choose = (row: Row) => {
-    if (row.kind === "tag") pickTag(row.tag);
+    if (row.kind === "all") seeAll();
+    else if (row.kind === "tag") pickTag(row.tag);
     else if (row.kind === "person") pickMention(row.key);
     else pick(row.result.entry);
   };
@@ -234,6 +258,23 @@ export function Spotlight({ entries, onPick, onPickTag, onPickMention, peopleInf
                 if (moved < 2 || performance.now() - lastKeyNavAt.current < 250) return;
                 setSel(i);
               };
+
+              if (row.kind === "all") {
+                return (
+                  <button
+                    key="see-all"
+                    className={`spot-row spot-row-all${i === sel ? " spot-row-active" : ""}`}
+                    onPointerMove={onMove}
+                    onClick={seeAll}
+                  >
+                    <span className="spot-all-glyph">≡</span>
+                    <span className="spot-text">
+                      See all {row.count} {row.count === 1 ? "match" : "matches"} for “{term}”
+                    </span>
+                    <span className="spot-time">↵</span>
+                  </button>
+                );
+              }
 
               if (row.kind === "tag") {
                 const c = chipColor(row.tag, theme);

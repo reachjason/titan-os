@@ -18,6 +18,7 @@ import { FilterMenu } from "./components/FilterMenu";
 import { SignIn } from "./components/SignIn";
 import { Toast } from "./components/Toast";
 import { config } from "./config";
+import { searchEntries } from "./lib/spotlightSearch";
 import type { Entry, FilterState, SortMode, TaskStatus, ViewMode } from "./types";
 
 /** Gate the app on auth state: sign-in screen when logged out, workspace when in. */
@@ -226,7 +227,10 @@ function Workspace() {
   const pinned = useMemo(() => entries.filter((e) => e.pinned), [entries]);
 
   const filtered = useMemo(() => {
-    // Tag + @mention filters (free-text search lives in the Spotlight palette).
+    // Tag + @mention filters, plus an optional free-text query (same matcher as
+    // the Spotlight palette) so "see all matches" lands on a persistent view.
+    const term = filter.query.trim();
+    const matchIds = term ? new Set(searchEntries(entries, term).map((r) => r.entry.id)) : null;
     return entries.filter((e) => {
       const tagOk =
         filter.tags.length === 0 ||
@@ -237,11 +241,13 @@ function Workspace() {
       const mentionOk =
         filter.mentions.length === 0 ||
         filter.mentions.some((n) => body.includes(`@${n.toLowerCase()}`));
-      return tagOk && mentionOk;
+      const queryOk = !matchIds || matchIds.has(e.id);
+      return tagOk && mentionOk && queryOk;
     });
   }, [entries, filter]);
 
-  const filtering = filter.tags.length > 0 || filter.mentions.length > 0;
+  const filtering =
+    filter.tags.length > 0 || filter.mentions.length > 0 || filter.query.trim().length > 0;
   const activeFilterCount = filter.tags.length + filter.mentions.length;
 
   const toggleTag = (tag: string) =>
@@ -627,6 +633,17 @@ function Workspace() {
         {filtering && (
           <div className="filter-bar">
             <span className="filter-label">Filtering</span>
+            {filter.query.trim() && (
+              <button
+                className="search-chip"
+                onClick={() => setFilter((f) => ({ ...f, query: "" }))}
+                title="Clear search"
+              >
+                <span className="search-chip-glyph">⌕</span>
+                <span className="search-chip-text">“{filter.query.trim()}”</span>
+                <span className="search-chip-x">✕</span>
+              </button>
+            )}
             {filter.tags.map((t) => (
               <TagChip key={t} tag={t} active onClick={toggleTag} />
             ))}
@@ -724,6 +741,14 @@ function Workspace() {
         {spotOpen && (
           <Spotlight
             entries={entries}
+            initialQuery={filter.query}
+            onSeeAll={(term) => {
+              setFilterOpen(false);
+              setFocus(false);
+              setView("list");
+              setFilter((f) => ({ ...f, query: term }));
+              flash(`Showing matches for “${term}”`);
+            }}
             onPick={(e) => {
               setFilterOpen(false);
               clearFilters();
