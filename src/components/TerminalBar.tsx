@@ -69,16 +69,22 @@ export const TerminalBar = forwardRef<TerminalBarHandle, Props>(
             } as Person & { isAll?: boolean },
             ...people,
           ]
-            .filter((p) => p.firstNameKey.startsWith(mentionFragment))
+            // A fully-typed name closes the picker (like a completed /tag), so
+            // ↑/↓ fall through to history instead of navigating the dropdown.
+            .filter((p) => p.firstNameKey.startsWith(mentionFragment) && p.firstNameKey !== mentionFragment)
             .slice(0, 6)
         : [];
 
-    const mode: "tag" | "people" | null =
-      mentionFragment !== null && peopleSuggestions.length > 0
-        ? "people"
-        : tagSuggestions.length > 0
-        ? "tag"
-        : null;
+    // While browsing history (histPos > 0) suppress autocomplete entirely, so
+    // recalled entries that end in a /tag or @mention don't hijack ↑/↓.
+    const browsing = histPos > 0;
+    const mode: "tag" | "people" | null = browsing
+      ? null
+      : mentionFragment !== null && peopleSuggestions.length > 0
+      ? "people"
+      : tagSuggestions.length > 0
+      ? "tag"
+      : null;
 
     const count = mode === "people" ? peopleSuggestions.length : tagSuggestions.length;
 
