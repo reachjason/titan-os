@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
 import type { Entry } from "../types";
 import { chipColor } from "../commands/tagColors";
 import { useCurrentTheme } from "../store/ThemeContext";
@@ -10,7 +10,19 @@ interface Props {
   entries: Entry[];
   /** Jump to an entry (e.g. clear filters + scroll). */
   onPick?: (entry: Entry) => void;
+  /** Apply a tag filter (show all entries with this tag). */
+  onPickTag?: (tag: string) => void;
   onClose: () => void;
+}
+
+/** A search row: either a tag-filter shortcut or a matched entry. */
+type Row =
+  | { kind: "tag"; tag: string; count: number }
+  | { kind: "entry"; result: ReturnType<typeof searchEntries>[number] };
+
+/** Strip a single leading sigil so "/idea", "@idea", "idea" all match a tag. */
+function normalizeQuery(q: string): string {
+  return q.trim().toLowerCase().replace(/^[/@#]+/, "");
 }
 
 function loadRecentSearches(): string[] {
@@ -38,7 +50,7 @@ function renderMarked(text: string, ranges: HighlightRange[]) {
 }
 
 /** macOS-Spotlight-style search palette: ⇧F opens, live filter, esc closes. */
-export function Spotlight({ entries, onPick, onClose }: Props) {
+export function Spotlight({ entries, onPick, onPickTag, onClose }: Props) {
   const theme = useCurrentTheme();
   const [q, setQ] = useState("");
   const [sel, setSel] = useState(0);
@@ -53,18 +65,59 @@ export function Spotlight({ entries, onPick, onClose }: Props) {
 
   const results = useMemo(() => searchEntries(entries, q), [entries, q]);
 
+  // Entry count per tag, for the "Filter by /tag" shortcut rows.
+  const tagCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const e of entries) for (const t of e.tags) counts[t] = (counts[t] ?? 0) + 1;
+    return counts;
+  }, [entries]);
+
+  // Tags whose name matches the query — prefix matches first, then by frequency.
+  const tagMatches = useMemo(() => {
+    const term = normalizeQuery(q);
+    if (!term) return [];
+    return Object.keys(tagCounts)
+      .filter((t) => t.includes(term))
+      .sort((a, b) => {
+        const ap = a.startsWith(term) ? 0 : 1;
+        const bp = b.startsWith(term) ? 0 : 1;
+        return ap - bp || tagCounts[b] - tagCounts[a] || a.localeCompare(b);
+      })
+      .slice(0, 4);
+  }, [tagCounts, q]);
+
+  // Tag shortcuts sit above entry matches; both share one keyboard cursor.
+  const rows: Row[] = useMemo(
+    () => [
+      ...(onPickTag ? tagMatches.map((tag) => ({ kind: "tag" as const, tag, count: tagCounts[tag] })) : []),
+      ...results.map((result) => ({ kind: "entry" as const, result })),
+    ],
+    [onPickTag, tagMatches, tagCounts, results]
+  );
+
   useEffect(() => setSel(0), [q]);
 
-  const pick = (e: Entry) => {
+  const remember = () => {
     const term = q.trim();
-    if (term) {
-      const next = [term, ...recent.filter((item) => item.toLowerCase() !== term.toLowerCase())];
-      setRecent(next.slice(0, 5));
-      saveRecentSearches(next);
-    }
+    if (!term) return;
+    const next = [term, ...recent.filter((item) => item.toLowerCase() !== term.toLowerCase())];
+    setRecent(next.slice(0, 5));
+    saveRecentSearches(next);
+  };
+
+  const pick = (e: Entry) => {
+    remember();
     onPick?.(e);
     onClose();
   };
+
+  const pickTag = (tag: string) => {
+    remember();
+    onPickTag?.(tag);
+    onClose();
+  };
+
+  const choose = (row: Row) => (row.kind === "tag" ? pickTag(row.tag) : pick(row.result.entry));
 
   const resultLabel =
     q.trim().length > 0
@@ -94,14 +147,14 @@ export function Spotlight({ entries, onPick, onClose }: Props) {
               } else if (e.key === "ArrowDown") {
                 e.preventDefault();
                 lastKeyNavAt.current = performance.now();
-                setSel((s) => Math.min(s + 1, Math.max(results.length - 1, 0)));
+                setSel((s) => Math.min(s + 1, Math.max(rows.length - 1, 0)));
               } else if (e.key === "ArrowUp") {
                 e.preventDefault();
                 lastKeyNavAt.current = performance.now();
                 setSel((s) => Math.max(s - 1, 0));
-              } else if (e.key === "Enter" && results[sel]) {
+              } else if (e.key === "Enter" && rows[sel]) {
                 e.preventDefault();
-                pick(results[sel].entry);
+                choose(rows[sel]);
               }
             }}
           />
@@ -121,13 +174,44 @@ export function Spotlight({ entries, onPick, onClose }: Props) {
         )}
 
         <div className="spot-body">
-          {results.length === 0 ? (
+          {rows.length === 0 ? (
             <div className="spot-empty">
               <span>No entries match “{q}”</span>
               <small>Try a tag, person, status, or date.</small>
             </div>
           ) : (
-            results.map((result, i) => {
+            rows.map((row, i) => {
+              const onMove = (ev: PointerEvent) => {
+                const prev = pointerRef.current;
+                pointerRef.current = { x: ev.clientX, y: ev.clientY };
+                if (!prev) return;
+                const moved = Math.abs(prev.x - ev.clientX) + Math.abs(prev.y - ev.clientY);
+                if (moved < 2 || performance.now() - lastKeyNavAt.current < 250) return;
+                setSel(i);
+              };
+
+              if (row.kind === "tag") {
+                const c = chipColor(row.tag, theme);
+                return (
+                  <button
+                    key={`tag:${row.tag}`}
+                    className={`spot-row spot-row-tag${i === sel ? " spot-row-active" : ""}`}
+                    onPointerMove={onMove}
+                    onClick={() => pickTag(row.tag)}
+                  >
+                    <span className="chip" style={{ background: c.bg, color: c.fg }}>
+                      <span className="chip-slash">/</span>
+                      {row.tag}
+                    </span>
+                    <span className="spot-text">Filter by /{row.tag}</span>
+                    <span className="spot-time">
+                      {row.count} {row.count === 1 ? "entry" : "entries"}
+                    </span>
+                  </button>
+                );
+              }
+
+              const { result } = row;
               const e = result.entry;
               const tag = e.tags[0];
               const c = tag ? chipColor(tag, theme) : null;
@@ -136,14 +220,7 @@ export function Spotlight({ entries, onPick, onClose }: Props) {
                 <button
                   key={e.id}
                   className={`spot-row${i === sel ? " spot-row-active" : ""}`}
-                  onPointerMove={(ev) => {
-                    const prev = pointerRef.current;
-                    pointerRef.current = { x: ev.clientX, y: ev.clientY };
-                    if (!prev) return;
-                    const moved = Math.abs(prev.x - ev.clientX) + Math.abs(prev.y - ev.clientY);
-                    if (moved < 2 || performance.now() - lastKeyNavAt.current < 250) return;
-                    setSel(i);
-                  }}
+                  onPointerMove={onMove}
                   onClick={() => pick(e)}
                 >
                   {tag && c && (

@@ -1701,6 +1701,9 @@ kbd {
 .spot-row-active {
   background: var(--bg-sunk);
 }
+.spot-row-tag .spot-text {
+  color: var(--ink-soft);
+}
 .spot-text {
   flex: 1;
   min-width: 0;

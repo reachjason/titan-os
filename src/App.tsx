@@ -711,6 +711,17 @@ function Workspace() {
               setPendingOpenId(e.id);
               flash(`Opened /${e.tags[0] ?? "note"} · ${e.body.slice(0, 28) || "entry"}`);
             }}
+            onPickTag={(tag) => {
+              setFilterOpen(false);
+              setFocus(false);
+              setView("list");
+              setFilter((f) => ({
+                ...f,
+                tags: f.tags.includes(tag) ? f.tags : [...f.tags, tag],
+                query: "",
+              }));
+              flash(`Filtering /${tag}`);
+            }}
             onClose={() => setSpotOpen(false)}
           />
         )}
