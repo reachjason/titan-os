@@ -18,7 +18,7 @@ import { FilterMenu } from "./components/FilterMenu";
 import { SignIn } from "./components/SignIn";
 import { Toast } from "./components/Toast";
 import { config } from "./config";
-import type { Entry, FilterState, SortMode, ViewMode } from "./types";
+import type { Entry, FilterState, SortMode, TaskStatus, ViewMode } from "./types";
 
 /** Gate the app on auth state: sign-in screen when logged out, workspace when in. */
 export default function App() {
@@ -61,8 +61,18 @@ function loadView(): {
 }
 
 function Workspace() {
-  const { entries, add, update, remove, toggleDone, togglePin, moveCard, setOrder, importEntries } =
-    useEntries();
+  const {
+    entries,
+    add,
+    update,
+    remove,
+    restore,
+    toggleDone,
+    togglePin,
+    moveCard,
+    setOrder,
+    importEntries,
+  } = useEntries();
   const { theme, toggle } = useTheme();
   const { prefs, toggleTimestamps, toggleTags, addTaskTag, removeTaskTag } = usePrefs();
   const currentUser = useQuery(api.users.currentUser);
@@ -97,8 +107,87 @@ function Workspace() {
   // Pending leader key for two-stroke chords (t c / t t), reset after a short window.
   const chordRef = useRef<string | null>(null);
   const chordTimer = useRef<number | undefined>(undefined);
+  // Action history for ⌘Z / ⇧⌘Z. Each item knows how to reverse one mutation
+  // and how to re-apply it. Newest last; capped so it can't grow unbounded.
+  // Add/delete change the entry's id, so those items keep a small mutable `ref`
+  // that undo/redo update as the row is re-created.
+  type HistItem = { name: string; undo: () => void; redo: () => void };
+  const undoStack = useRef<HistItem[]>([]);
+  const redoStack = useRef<HistItem[]>([]);
 
   const flash = (msg: string) => setToast(msg);
+
+  const pushUndo = (item: HistItem) => {
+    undoStack.current.push(item);
+    redoStack.current = []; // a fresh action invalidates the redo branch
+    if (undoStack.current.length > 50) undoStack.current.shift();
+  };
+
+  // Wrapped mutations: do the action, then record how to reverse/replay it. The
+  // recorded thunks call the store directly (not these wrappers) so undo/redo
+  // don't themselves get recorded.
+  const editEntry = (id: string, raw: string) => {
+    const prev = entries.find((e) => e.id === id);
+    update(id, raw);
+    if (prev) {
+      const oldRaw = prev.raw;
+      pushUndo({ name: "edit", undo: () => update(id, oldRaw), redo: () => update(id, raw) });
+    }
+  };
+  const deleteEntry = (id: string) => {
+    const prev = entries.find((e) => e.id === id);
+    remove(id);
+    if (prev) {
+      const snap = {
+        raw: prev.raw,
+        done: !!prev.done,
+        pinned: !!prev.pinned,
+        status: prev.status ?? "todo",
+        order: prev.order ?? prev.createdAt,
+        createdAt: prev.createdAt,
+      };
+      const ref = { id };
+      pushUndo({
+        name: "delete",
+        undo: async () => {
+          const nid = await restore(snap);
+          if (nid) ref.id = nid;
+        },
+        redo: () => remove(ref.id),
+      });
+    }
+  };
+  const toggleDoneEntry = (id: string) => {
+    const tags = prefs.taskTags;
+    toggleDone(id, tags);
+    pushUndo({ name: "task", undo: () => toggleDone(id, tags), redo: () => toggleDone(id, tags) });
+  };
+  const togglePinEntry = (id: string) => {
+    togglePin(id);
+    pushUndo({ name: "pin", undo: () => togglePin(id), redo: () => togglePin(id) });
+  };
+  const moveCardEntry = (id: string, status: TaskStatus, order: number) => {
+    const prev = entries.find((e) => e.id === id);
+    const tags = prefs.taskTags;
+    moveCard(id, status, order, tags);
+    if (prev) {
+      const ps = prev.status ?? "todo";
+      const po = prev.order ?? prev.createdAt;
+      pushUndo({
+        name: "move",
+        undo: () => moveCard(id, ps, po, tags),
+        redo: () => moveCard(id, status, order, tags),
+      });
+    }
+  };
+  const setOrderEntry = (id: string, order: number) => {
+    const prev = entries.find((e) => e.id === id);
+    setOrder(id, order);
+    if (prev) {
+      const po = prev.order ?? prev.createdAt;
+      pushUndo({ name: "reorder", undo: () => setOrder(id, po), redo: () => setOrder(id, order) });
+    }
+  };
 
   // Persist the view (sort + match + list/board) across reloads.
   useEffect(() => {
@@ -199,6 +288,31 @@ function Workspace() {
       }
       if (typing) return;
       const k = e.key.toLowerCase();
+
+      // ⌘Z undo / ⇧⌘Z (or Ctrl+Y) redo the last data action. (While typing we
+      // returned above, so the browser's native text undo handles inputs.)
+      const redoKey =
+        ((e.metaKey || e.ctrlKey) && e.shiftKey && k === "z") || (e.ctrlKey && k === "y");
+      if (redoKey) {
+        e.preventDefault();
+        const item = redoStack.current.pop();
+        flash(item ? `Redid ${item.name}` : "Nothing to redo");
+        if (item) {
+          item.redo();
+          undoStack.current.push(item);
+        }
+        return;
+      }
+      if ((e.metaKey || e.ctrlKey) && k === "z") {
+        e.preventDefault();
+        const item = undoStack.current.pop();
+        flash(item ? `Undid ${item.name}` : "Nothing to undo");
+        if (item) {
+          item.undo();
+          redoStack.current.push(item);
+        }
+        return;
+      }
 
       if (spotOpen || settingsOpen || helpOpen || accountOpen) return;
 
@@ -320,10 +434,20 @@ function Workspace() {
     reader.readAsText(file);
   };
 
-  const logEntry = (raw: string) => {
-    add(raw);
+  const logEntry = async (raw: string) => {
     const tag = raw.match(/(?:^|\s)\/([a-z0-9][a-z0-9_-]*)/i);
     flash(tag ? `Logged /${tag[1].toLowerCase()}` : "Logged");
+    const id = await add(raw);
+    if (!id) return;
+    const ref = { id };
+    pushUndo({
+      name: "add",
+      undo: () => remove(ref.id),
+      redo: async () => {
+        const nid = await add(raw);
+        if (nid) ref.id = nid;
+      },
+    });
   };
 
   const handleFeedScroll = () => {
@@ -512,9 +636,9 @@ function Workspace() {
           <main className={feedAreaClass} onScroll={handleFeedScroll}>
             <Board
               entries={filtered}
-              onMove={(id, status, order) => moveCard(id, status, order, prefs.taskTags)}
-              onTogglePin={togglePin}
-              onDelete={remove}
+              onMove={moveCardEntry}
+              onTogglePin={togglePinEntry}
+              onDelete={deleteEntry}
               onTagClick={toggleTag}
             />
           </main>
@@ -533,10 +657,10 @@ function Workspace() {
                 highlightedEntryId={highlightedEntryId}
                 onTagClick={toggleTag}
                 onMentionClick={toggleMention}
-                onEdit={update}
-                onDelete={remove}
-                onToggleDone={(id) => toggleDone(id, prefs.taskTags)}
-                onTogglePin={togglePin}
+                onEdit={editEntry}
+                onDelete={deleteEntry}
+                onToggleDone={toggleDoneEntry}
+                onTogglePin={togglePinEntry}
               />
             )}
 
@@ -554,11 +678,11 @@ function Workspace() {
                 highlightedEntryId={highlightedEntryId}
                 onTagClick={toggleTag}
                 onMentionClick={toggleMention}
-                onEdit={update}
-                onDelete={remove}
-                onToggleDone={(id) => toggleDone(id, prefs.taskTags)}
-                onTogglePin={togglePin}
-                onSetOrder={setOrder}
+                onEdit={editEntry}
+                onDelete={deleteEntry}
+                onToggleDone={toggleDoneEntry}
+                onTogglePin={togglePinEntry}
+                onSetOrder={setOrderEntry}
               />
             </main>
           </>

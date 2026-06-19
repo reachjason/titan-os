@@ -155,6 +155,43 @@ export const remove = mutation({
   },
 });
 
+/**
+ * Re-create a previously-deleted entry from its raw text, preserving the flags
+ * that aren't derivable from raw (done/pinned/status/order/createdAt). Used by
+ * client-side undo; mentions re-resolve from the raw text. Returns the new id.
+ */
+export const restore = mutation({
+  args: {
+    raw: v.string(),
+    done: v.boolean(),
+    pinned: v.boolean(),
+    status: statusValidator,
+    order: v.number(),
+    createdAt: v.number(),
+  },
+  handler: async (ctx, { raw, done, pinned, status, order, createdAt }) => {
+    const userId = await requireUser(ctx);
+    const trimmed = raw.trim();
+    if (!trimmed) return null;
+    const { tags, body } = parseEntry(trimmed);
+    const mentions = await resolveMentions(ctx, trimmed, userId);
+    return await ctx.db.insert("entries", {
+      userId,
+      raw: trimmed,
+      body,
+      tags,
+      createdAt,
+      updatedAt: Date.now(),
+      edited: false,
+      done,
+      pinned,
+      status,
+      order,
+      mentions,
+    });
+  },
+});
+
 /** Toggle a task between done and todo, syncing /do↔/done. */
 export const toggleDone = mutation({
   args: { id: v.id("entries"), taskTags: v.array(v.string()) },

@@ -20,6 +20,8 @@ const SHORTCUTS: { keys: string[]; label: string }[] = [
   { keys: ["click ☑"], label: "Complete task" },
   { keys: ["click"], label: "Move board card" },
   { keys: ["↑", "↓"], label: "History (log bar)" },
+  { keys: ["⌘Z"], label: "Undo last action" },
+  { keys: ["⇧⌘Z"], label: "Redo last action" },
   { keys: ["?"], label: "This sheet" },
 ];
 

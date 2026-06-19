@@ -203,18 +203,25 @@ export const TerminalBar = forwardRef<TerminalBarHandle, Props>(
             }}
             onKeyDown={(e) => {
               const el = e.currentTarget;
+              // History recall triggers from the first/last text line (not a
+              // hard caret-at-0 check) so repeated ↑/↓ keep cycling even though
+              // each recall drops the caret at the end of the recalled text.
+              const firstNl = value.indexOf("\n");
+              const lastNl = value.lastIndexOf("\n");
+              const onFirstLine = firstNl === -1 || el.selectionStart <= firstNl;
+              const onLastLine = el.selectionStart > lastNl;
               if (e.key === "ArrowDown" && mode) {
                 e.preventDefault();
                 setSel((s) => (s + 1) % count);
               } else if (e.key === "ArrowUp" && mode) {
                 e.preventDefault();
                 setSel((s) => (s - 1 + count) % count);
-              } else if (e.key === "ArrowUp" && el.selectionStart === 0) {
-                // caret at very start → recall older entry
+              } else if (e.key === "ArrowUp" && onFirstLine) {
+                // on the first line → recall an older entry
                 e.preventDefault();
                 recall(histPos + 1);
-              } else if (e.key === "ArrowDown" && el.selectionStart === value.length) {
-                // caret at very end → recall newer entry
+              } else if (e.key === "ArrowDown" && onLastLine) {
+                // on the last line → recall a newer entry
                 e.preventDefault();
                 recall(histPos - 1);
               } else if (e.key === "Tab" && mode) {
@@ -227,12 +234,9 @@ export const TerminalBar = forwardRef<TerminalBarHandle, Props>(
                 if (mode) applyCurrent();
                 else submit();
               } else if (e.key === config.shortcuts.clearFilters) {
-                // Esc clears the line and moves focus out of the bar.
+                // Esc steps out of the bar but keeps the draft text intact.
                 e.preventDefault();
-                setValue("");
                 setSel(0);
-                setHistPos(0);
-                reset();
                 el.blur();
               }
             }}

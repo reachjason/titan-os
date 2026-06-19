@@ -39,6 +39,7 @@ export function useEntries() {
   const addM = useMutation(api.entries.add);
   const updateM = useMutation(api.entries.update);
   const removeM = useMutation(api.entries.remove);
+  const restoreM = useMutation(api.entries.restore);
   const toggleDoneM = useMutation(api.entries.toggleDone);
   const togglePinM = useMutation(api.entries.togglePin);
   const moveCardM = useMutation(api.entries.moveCard);
@@ -47,7 +48,11 @@ export function useEntries() {
   // `undefined` while loading → render as empty (the UI shows its first-run state).
   const entries = useMemo(() => (docs ?? []).map(toEntry), [docs]);
 
-  const add = useCallback((raw: string) => void addM({ raw }), [addM]);
+  // Returns the new entry's id (so callers can undo by deleting it).
+  const add = useCallback(
+    (raw: string) => addM({ raw }) as Promise<Id<"entries"> | null>,
+    [addM]
+  );
   const update = useCallback(
     (id: string, raw: string) => void updateM({ id: id as Id<"entries">, raw }),
     [updateM]
@@ -55,6 +60,18 @@ export function useEntries() {
   const remove = useCallback(
     (id: string) => void removeM({ id: id as Id<"entries"> }),
     [removeM]
+  );
+  // Re-create a deleted entry, preserving flags not derivable from raw.
+  const restore = useCallback(
+    (snapshot: {
+      raw: string;
+      done: boolean;
+      pinned: boolean;
+      status: TaskStatus;
+      order: number;
+      createdAt: number;
+    }) => restoreM(snapshot) as Promise<Id<"entries"> | null>,
+    [restoreM]
   );
   const toggleDone = useCallback(
     (id: string, taskTags: string[]) =>
@@ -91,6 +108,7 @@ export function useEntries() {
     add,
     update,
     remove,
+    restore,
     toggleDone,
     togglePin,
     moveCard,
