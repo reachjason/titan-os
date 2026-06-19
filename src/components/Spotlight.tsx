@@ -12,12 +12,17 @@ interface Props {
   onPick?: (entry: Entry) => void;
   /** Apply a tag filter (show all entries with this tag). */
   onPickTag?: (tag: string) => void;
+  /** Apply a people filter (show all entries mentioning this person). */
+  onPickMention?: (name: string) => void;
+  /** Mention token → display name + avatar. */
+  peopleInfo?: Record<string, { label: string; image?: string }>;
   onClose: () => void;
 }
 
-/** A search row: either a tag-filter shortcut or a matched entry. */
+/** A search row: a tag-filter shortcut, a people-filter shortcut, or an entry. */
 type Row =
   | { kind: "tag"; tag: string; count: number }
+  | { kind: "person"; key: string; label: string; image?: string; count: number }
   | { kind: "entry"; result: ReturnType<typeof searchEntries>[number] };
 
 /** Strip a single leading sigil so "/idea", "@idea", "idea" all match a tag. */
@@ -50,7 +55,7 @@ function renderMarked(text: string, ranges: HighlightRange[]) {
 }
 
 /** macOS-Spotlight-style search palette: ⇧F opens, live filter, esc closes. */
-export function Spotlight({ entries, onPick, onPickTag, onClose }: Props) {
+export function Spotlight({ entries, onPick, onPickTag, onPickMention, peopleInfo, onClose }: Props) {
   const theme = useCurrentTheme();
   const [q, setQ] = useState("");
   const [sel, setSel] = useState(0);
@@ -72,27 +77,57 @@ export function Spotlight({ entries, onPick, onPickTag, onClose }: Props) {
     return counts;
   }, [entries]);
 
-  // Tags whose name matches the query — prefix matches first, then by frequency.
-  const tagMatches = useMemo(() => {
+  // Entry count per @mention token, for the "Filter by @name" shortcut rows.
+  const mentionCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    const re = /(?:^|\s)@([a-z0-9][a-z0-9_-]*)/gi;
+    for (const e of entries) {
+      const seen = new Set<string>();
+      re.lastIndex = 0;
+      let m: RegExpExecArray | null;
+      while ((m = re.exec(e.body))) {
+        const token = m[1].toLowerCase();
+        if (!seen.has(token)) {
+          seen.add(token);
+          counts[token] = (counts[token] ?? 0) + 1;
+        }
+      }
+    }
+    return counts;
+  }, [entries]);
+
+  // Tags / people whose name matches the query — prefix first, then by frequency.
+  const byQuery = (counts: Record<string, number>) => {
     const term = normalizeQuery(q);
     if (!term) return [];
-    return Object.keys(tagCounts)
-      .filter((t) => t.includes(term))
+    return Object.keys(counts)
+      .filter((k) => k.includes(term))
       .sort((a, b) => {
         const ap = a.startsWith(term) ? 0 : 1;
         const bp = b.startsWith(term) ? 0 : 1;
-        return ap - bp || tagCounts[b] - tagCounts[a] || a.localeCompare(b);
+        return ap - bp || counts[b] - counts[a] || a.localeCompare(b);
       })
       .slice(0, 4);
-  }, [tagCounts, q]);
+  };
+  const tagMatches = useMemo(() => byQuery(tagCounts), [tagCounts, q]);
+  const mentionMatches = useMemo(() => byQuery(mentionCounts), [mentionCounts, q]);
 
-  // Tag shortcuts sit above entry matches; both share one keyboard cursor.
+  // Tag + people shortcuts sit above entry matches; all share one cursor.
   const rows: Row[] = useMemo(
     () => [
       ...(onPickTag ? tagMatches.map((tag) => ({ kind: "tag" as const, tag, count: tagCounts[tag] })) : []),
+      ...(onPickMention
+        ? mentionMatches.map((key) => ({
+            kind: "person" as const,
+            key,
+            label: peopleInfo?.[key]?.label ?? key,
+            image: peopleInfo?.[key]?.image,
+            count: mentionCounts[key],
+          }))
+        : []),
       ...results.map((result) => ({ kind: "entry" as const, result })),
     ],
-    [onPickTag, tagMatches, tagCounts, results]
+    [onPickTag, onPickMention, tagMatches, mentionMatches, tagCounts, mentionCounts, peopleInfo, results]
   );
 
   useEffect(() => setSel(0), [q]);
@@ -117,7 +152,17 @@ export function Spotlight({ entries, onPick, onPickTag, onClose }: Props) {
     onClose();
   };
 
-  const choose = (row: Row) => (row.kind === "tag" ? pickTag(row.tag) : pick(row.result.entry));
+  const pickMention = (name: string) => {
+    remember();
+    onPickMention?.(name);
+    onClose();
+  };
+
+  const choose = (row: Row) => {
+    if (row.kind === "tag") pickTag(row.tag);
+    else if (row.kind === "person") pickMention(row.key);
+    else pick(row.result.entry);
+  };
 
   const resultLabel =
     q.trim().length > 0
@@ -204,6 +249,29 @@ export function Spotlight({ entries, onPick, onPickTag, onClose }: Props) {
                       {row.tag}
                     </span>
                     <span className="spot-text">Filter by /{row.tag}</span>
+                    <span className="spot-time">
+                      {row.count} {row.count === 1 ? "entry" : "entries"}
+                    </span>
+                  </button>
+                );
+              }
+
+              if (row.kind === "person") {
+                return (
+                  <button
+                    key={`person:${row.key}`}
+                    className={`spot-row spot-row-tag${i === sel ? " spot-row-active" : ""}`}
+                    onPointerMove={onMove}
+                    onClick={() => pickMention(row.key)}
+                  >
+                    {row.image ? (
+                      <img className="suggest-avatar" src={row.image} alt="" />
+                    ) : (
+                      <span className="suggest-avatar suggest-avatar-fallback">
+                        {row.label[0]?.toUpperCase()}
+                      </span>
+                    )}
+                    <span className="spot-text">Filter by @{row.label}</span>
                     <span className="spot-time">
                       {row.count} {row.count === 1 ? "entry" : "entries"}
                     </span>

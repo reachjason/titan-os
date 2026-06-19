@@ -232,6 +232,34 @@ body {
   max-height: 260px;
   overflow-y: auto;
 }
+.filter-menu-section {
+  padding: 8px 6px 3px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.filter-menu-section:first-child {
+  padding-top: 2px;
+}
+.filter-avatar {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.filter-avatar-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-sunk);
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+}
 .filter-menu-item {
   display: flex;
   align-items: center;

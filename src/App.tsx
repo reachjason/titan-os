@@ -203,6 +203,25 @@ function Workspace() {
     return Array.from(set).sort();
   }, [entries]);
 
+  // @mention tokens that actually appear in entries (for the people filter).
+  const knownMentions = useMemo(() => {
+    const set = new Set<string>();
+    const re = /(?:^|\s)@([a-z0-9][a-z0-9_-]*)/gi;
+    for (const e of entries) {
+      re.lastIndex = 0;
+      let m: RegExpExecArray | null;
+      while ((m = re.exec(e.body))) set.add(m[1].toLowerCase());
+    }
+    return Array.from(set).sort();
+  }, [entries]);
+
+  // Map a mention token → display name + avatar, for nicer filter/search rows.
+  const peopleInfo = useMemo(() => {
+    const map: Record<string, { label: string; image?: string }> = {};
+    for (const p of people) map[p.firstNameKey] = { label: p.firstName, image: p.image };
+    return map;
+  }, [people]);
+
   const history = useMemo(() => entries.map((e) => e.raw), [entries]);
   const pinned = useMemo(() => entries.filter((e) => e.pinned), [entries]);
 
@@ -524,9 +543,13 @@ function Workspace() {
             {filterOpen && (
               <FilterMenu
                 tags={knownTags}
-                active={filter.tags}
+                activeTags={filter.tags}
+                people={knownMentions}
+                peopleInfo={peopleInfo}
+                activeMentions={filter.mentions}
                 match={filter.match}
-                onToggle={toggleTag}
+                onToggleTag={toggleTag}
+                onToggleMention={toggleMention}
                 onToggleMatch={toggleMatch}
                 onClear={() => {
                   clearFilters();
@@ -722,6 +745,18 @@ function Workspace() {
               }));
               flash(`Filtering /${tag}`);
             }}
+            onPickMention={(name) => {
+              setFilterOpen(false);
+              setFocus(false);
+              setView("list");
+              setFilter((f) => ({
+                ...f,
+                mentions: f.mentions.includes(name) ? f.mentions : [...f.mentions, name],
+                query: "",
+              }));
+              flash(`Filtering @${name}`);
+            }}
+            peopleInfo={peopleInfo}
             onClose={() => setSpotOpen(false)}
           />
         )}
