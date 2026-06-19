@@ -203,25 +203,28 @@ export const TerminalBar = forwardRef<TerminalBarHandle, Props>(
             }}
             onKeyDown={(e) => {
               const el = e.currentTarget;
-              // History recall triggers from the first/last text line (not a
-              // hard caret-at-0 check) so repeated ↑/↓ keep cycling even though
-              // each recall drops the caret at the end of the recalled text.
+              // History recall is terminal-style: ↑ only *enters* history when
+              // the caret is at the very front of the draft (so it won't clobber
+              // a draft you're editing or moving the caret through). Once in
+              // history (histPos > 0) ↑/↓ cycle freely, and ↓ never fires while
+              // drafting (there's nothing newer than the current draft).
               const firstNl = value.indexOf("\n");
               const lastNl = value.lastIndexOf("\n");
               const onFirstLine = firstNl === -1 || el.selectionStart <= firstNl;
               const onLastLine = el.selectionStart > lastNl;
+              const atStart = el.selectionStart === 0 && el.selectionEnd === 0;
               if (e.key === "ArrowDown" && mode) {
                 e.preventDefault();
                 setSel((s) => (s + 1) % count);
               } else if (e.key === "ArrowUp" && mode) {
                 e.preventDefault();
                 setSel((s) => (s - 1 + count) % count);
-              } else if (e.key === "ArrowUp" && onFirstLine) {
-                // on the first line → recall an older entry
+              } else if (e.key === "ArrowUp" && (histPos > 0 ? onFirstLine : atStart)) {
+                // recall an older entry (enter history from the front of a draft)
                 e.preventDefault();
                 recall(histPos + 1);
-              } else if (e.key === "ArrowDown" && onLastLine) {
-                // on the last line → recall a newer entry
+              } else if (e.key === "ArrowDown" && histPos > 0 && onLastLine) {
+                // already browsing history → recall a newer entry
                 e.preventDefault();
                 recall(histPos - 1);
               } else if (e.key === "Tab" && mode) {
