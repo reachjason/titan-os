@@ -70,16 +70,6 @@ function words(text: string): string[] {
   return text.toLowerCase().match(/[a-z0-9_-]+/g) ?? [];
 }
 
-function isSubsequence(needle: string, haystack: string): boolean {
-  if (needle.length < 3) return false;
-  let i = 0;
-  for (const ch of haystack) {
-    if (ch === needle[i]) i += 1;
-    if (i === needle.length) return true;
-  }
-  return false;
-}
-
 function editDistanceWithin(a: string, b: string, max: number): boolean {
   if (Math.abs(a.length - b.length) > max) return false;
   let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
@@ -98,14 +88,16 @@ function editDistanceWithin(a: string, b: string, max: number): boolean {
   return prev[b.length] <= max;
 }
 
+// Word-level fuzziness only: a prefix boost and tight typo tolerance. No
+// subsequence matching — that let a longer query match *more* (unrelated)
+// entries than a shorter one, which is the opposite of what users expect.
 function fuzzyWordScore(term: string, text: string): number {
   if (term.length < 3) return 0;
   for (const word of words(text)) {
     if (word.startsWith(term)) return 28;
     if (term.length >= 4 && editDistanceWithin(term, word, term.length > 6 ? 2 : 1)) return 18;
-    if (isSubsequence(term, word)) return 13;
   }
-  return isSubsequence(term, text.toLowerCase()) ? 8 : 0;
+  return 0;
 }
 
 function scoreText(term: string, text: string, weight: number): number {
