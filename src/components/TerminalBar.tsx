@@ -34,6 +34,8 @@ export const TerminalBar = forwardRef<TerminalBarHandle, Props>(
     const [value, setValue] = useState("");
     const [sel, setSel] = useState(0);
     const [histPos, setHistPos] = useState(0);
+    // The in-progress draft, stashed when you step into history so ↓ restores it.
+    const draftRef = useRef("");
     const inputRef = useRef<HTMLTextAreaElement>(null);
 
     useImperativeHandle(ref, () => ({
@@ -115,13 +117,17 @@ export const TerminalBar = forwardRef<TerminalBarHandle, Props>(
       setValue("");
       setSel(0);
       setHistPos(0);
+      draftRef.current = "";
       reset();
     };
 
     const recall = (pos: number) => {
       const clamped = Math.max(0, Math.min(pos, history.length));
+      // Stepping into history from a draft → stash it so ↓ can bring it back.
+      if (histPos === 0 && clamped > 0) draftRef.current = value;
       setHistPos(clamped);
-      setValue(clamped === 0 ? "" : history[history.length - clamped]);
+      setValue(clamped === 0 ? draftRef.current : history[history.length - clamped]);
+      setSel(0);
       requestAnimationFrame(autoSize);
     };
 
@@ -203,28 +209,28 @@ export const TerminalBar = forwardRef<TerminalBarHandle, Props>(
             }}
             onKeyDown={(e) => {
               const el = e.currentTarget;
-              // History recall is terminal-style: ↑ only *enters* history when
-              // the caret is at the very front of the draft (so it won't clobber
-              // a draft you're editing or moving the caret through). Once in
-              // history (histPos > 0) ↑/↓ cycle freely, and ↓ never fires while
-              // drafting (there's nothing newer than the current draft).
+              // History recall, terminal-style: ↑ on the first line pulls an
+              // older entry, ↓ on the last line a newer one (in a single-line
+              // draft that's always, so it just works). The current draft is
+              // stashed on entry and restored when ↓ returns past the newest
+              // entry, so recalling never loses what you were typing. Move the
+              // caret to the start with ← / Home (those are never intercepted).
               const firstNl = value.indexOf("\n");
               const lastNl = value.lastIndexOf("\n");
               const onFirstLine = firstNl === -1 || el.selectionStart <= firstNl;
               const onLastLine = el.selectionStart > lastNl;
-              const atStart = el.selectionStart === 0 && el.selectionEnd === 0;
               if (e.key === "ArrowDown" && mode) {
                 e.preventDefault();
                 setSel((s) => (s + 1) % count);
               } else if (e.key === "ArrowUp" && mode) {
                 e.preventDefault();
                 setSel((s) => (s - 1 + count) % count);
-              } else if (e.key === "ArrowUp" && (histPos > 0 ? onFirstLine : atStart)) {
-                // recall an older entry (enter history from the front of a draft)
+              } else if (e.key === "ArrowUp" && onFirstLine) {
+                // first line → recall an older entry
                 e.preventDefault();
                 recall(histPos + 1);
               } else if (e.key === "ArrowDown" && histPos > 0 && onLastLine) {
-                // already browsing history → recall a newer entry
+                // last line → recall a newer entry (recall(0) restores the draft)
                 e.preventDefault();
                 recall(histPos - 1);
               } else if (e.key === "Tab" && mode) {
