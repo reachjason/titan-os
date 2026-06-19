@@ -223,7 +223,18 @@ function Workspace() {
     return map;
   }, [people]);
 
-  const history = useMemo(() => entries.map((e) => e.raw), [entries]);
+  // Log-bar ↑/↓ history: your own entries, oldest → newest, so ↑ pulls your
+  // most recent message first. (entries arrives as [...mine, ...mentioned], so
+  // mapping it raw would surface @-mention notes out of chronological order.)
+  const history = useMemo(
+    () =>
+      entries
+        .filter((e) => e.isMine !== false)
+        .slice()
+        .sort((a, b) => a.createdAt - b.createdAt)
+        .map((e) => e.raw),
+    [entries]
+  );
   const pinned = useMemo(() => entries.filter((e) => e.pinned), [entries]);
 
   const filtered = useMemo(() => {
