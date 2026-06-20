@@ -94,15 +94,15 @@ export function Feed(props: Props) {
   const rest = useMemo(() => entries.filter((e) => !e.pinned), [entries]);
   const items = useMemo(() => buildItems(rest, sort), [rest, sort]);
 
-  // Chat-style stream: keep the newest entry in view at the bottom. On arrival
-  // (and when new entries land) scroll to the end after layout settles.
+  // Chat-style stream: on session start, land at the bottom with the newest
+  // entry in view. This fires only once — typing/adding entries afterward
+  // never yanks the scroll position.
   const autoScroll = sort === "asc" && config.ui.autoScroll;
   const arrived = useRef(false);
   useEffect(() => {
-    if (!autoScroll || items.length === 0) return;
-    const behavior: ScrollBehavior = arrived.current ? "smooth" : "auto";
+    if (!autoScroll || items.length === 0 || arrived.current) return;
     const id = requestAnimationFrame(() => {
-      bottomRef.current?.scrollIntoView({ block: "end", behavior });
+      bottomRef.current?.scrollIntoView({ block: "end", behavior: "auto" });
       arrived.current = true;
     });
     return () => cancelAnimationFrame(id);
