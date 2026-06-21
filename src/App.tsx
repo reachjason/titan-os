@@ -369,7 +369,18 @@ function Workspace() {
         return;
       }
 
-      if (spotOpen || settingsOpen || helpOpen || accountOpen || nowOpen) return;
+      // The "right now" focus modal keeps the log bar usable — "/" still jumps
+      // to it so you can capture a thought without leaving focus. Everything
+      // else stays disabled while the modal is up.
+      if (nowOpen) {
+        if (e.key === config.shortcuts.focusBar) {
+          e.preventDefault();
+          barRef.current?.focus();
+        }
+        return;
+      }
+
+      if (spotOpen || settingsOpen || helpOpen || accountOpen) return;
 
       // Shift+F → Spotlight search.
       if (e.shiftKey && k === config.shortcuts.search) {
@@ -406,6 +417,18 @@ function Workspace() {
         return;
       }
 
+      // Resolve a pending "r" chord: r n → open the "right now" focus modal.
+      if (chordRef.current === "r") {
+        chordRef.current = null;
+        window.clearTimeout(chordTimer.current);
+        if (k === "n") {
+          e.preventDefault();
+          if (nowEntry) setNowOpen(true);
+          else flash("No “right now” task set");
+          return;
+        }
+        // not a chord completion — fall through and treat k normally
+      }
       // Resolve a pending "t" chord: t c → toggle timestamps, t t → toggle tags.
       if (chordRef.current === "t") {
         chordRef.current = null;
@@ -422,9 +445,9 @@ function Workspace() {
         }
         // not a chord completion — fall through and treat k normally
       }
-      // Start the chord on the leader key.
-      if (k === "t") {
-        chordRef.current = "t";
+      // Start a chord on a leader key (t → timestamps/tags, r → right now).
+      if (k === "t" || k === "r") {
+        chordRef.current = k;
         chordTimer.current = window.setTimeout(() => (chordRef.current = null), 800);
         return;
       }
@@ -455,6 +478,7 @@ function Workspace() {
     accountOpen,
     filterOpen,
     nowOpen,
+    nowEntry,
     toggleTimestamps,
     toggleTags,
   ]);
@@ -852,6 +876,7 @@ function Workspace() {
           <NowModal
             entry={nowEntry}
             checkable={isTask(nowEntry.tags, prefs.taskTags) || !!nowEntry.done}
+            showTags={prefs.showTags}
             activeTags={filter.tags}
             activeMentions={filter.mentions}
             onClose={() => setNowOpen(false)}
