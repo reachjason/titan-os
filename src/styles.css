@@ -1977,8 +1977,8 @@ kbd {
 @media (max-width: 640px) {
   /* Header wraps instead of overflowing; trim non-essential bits. */
   .top-bar {
-    gap: 10px;
-    row-gap: 8px;
+    gap: 14px;
+    row-gap: 10px;
     padding: 10px 14px;
     flex-wrap: wrap;
   }
@@ -1988,8 +1988,54 @@ kbd {
     display: none;
   }
   .bar-utils {
-    gap: 12px;
+    gap: 16px;
     margin-left: auto;
+  }
+
+  /* Touch-size the header controls — desktop keeps its compact glyphs. */
+  .view-link {
+    font-size: 15px;
+    padding-bottom: 4px;
+  }
+  .sort-group {
+    gap: 6px;
+  }
+  .sort-glyph {
+    font-size: 20px;
+    min-width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .filter-trigger {
+    min-width: 40px;
+    height: 40px;
+    justify-content: center;
+  }
+  .filter-glyph {
+    width: 20px;
+    height: 20px;
+  }
+  .search-trigger {
+    min-width: 40px;
+    height: 40px;
+    justify-content: center;
+  }
+  .search-glyph {
+    font-size: 22px;
+  }
+  .util-link {
+    font-size: 15px;
+  }
+  .theme-mark {
+    width: 18px;
+    height: 18px;
+  }
+  .avatar {
+    width: 34px;
+    height: 34px;
+    font-size: 14px;
   }
 
   /* Tighter gutters reclaim width. */
