@@ -23,6 +23,8 @@ interface Props {
   onDelete: (id: string) => void;
   onToggleDone: (id: string) => void;
   onTogglePin: (id: string) => void;
+  /** Set/clear this entry as the single "right now" focus task. */
+  onSetFocus?: (id: string) => void;
 }
 
 /** Does the body contain this tag inline (as "/tag")? */
@@ -44,6 +46,7 @@ export function EntryRow({
   onDelete,
   onToggleDone,
   onTogglePin,
+  onSetFocus,
 }: Props) {
   const [editing, setEditing] = useState(false);
   const [confirming, setConfirming] = useState(false);
@@ -176,6 +179,16 @@ export function EntryRow({
         ) : (
           <>
             <div className="row-actions">
+              {onSetFocus && (
+                <button
+                  className={`icon-btn${entry.focused ? " icon-focused" : ""}`}
+                  title={entry.focused ? "Clear right now" : "Set as right now"}
+                  aria-pressed={!!entry.focused}
+                  onClick={() => onSetFocus(entry.id)}
+                >
+                  {entry.focused ? "◉" : "◎"}
+                </button>
+              )}
               <button
                 className={`icon-btn${entry.pinned ? " icon-pinned" : ""}`}
                 title={entry.pinned ? "Unpin" : "Pin to top"}

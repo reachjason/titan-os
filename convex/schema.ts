@@ -22,6 +22,9 @@ export default defineSchema({
     done: v.boolean(),
     /** Pinned to the top focus section. */
     pinned: v.boolean(),
+    /** The single "right now" focus task. At most one true per user.
+     *  Optional so pre-existing rows stay valid. */
+    focused: v.optional(v.boolean()),
     /** Kanban column. */
     status: v.union(v.literal("todo"), v.literal("doing"), v.literal("done")),
     /** Manual sort position (board column + list "manual" sort). */

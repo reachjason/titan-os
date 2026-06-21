@@ -13,6 +13,8 @@ export interface Entry {
   done?: boolean;
   /** Pinned to the top focus section. */
   pinned?: boolean;
+  /** The single "right now" focus task (at most one per user). */
+  focused?: boolean;
   /** Kanban column for task entries. */
   status?: TaskStatus;
   /** Manual sort position (board column + list "manual" sort). */

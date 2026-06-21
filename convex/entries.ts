@@ -42,6 +42,17 @@ async function resolveMentions(
   return ids;
 }
 
+/** Clear the singleton "right now" flag across all the caller's own entries. */
+async function clearFocusFlags(ctx: MutationCtx, userId: Id<"users">) {
+  const mine = await ctx.db
+    .query("entries")
+    .withIndex("by_user", (q) => q.eq("userId", userId))
+    .collect();
+  for (const e of mine) {
+    if (e.focused) await ctx.db.patch(e._id, { focused: false });
+  }
+}
+
 /** Load an entry the caller may act on (author OR mentioned = full shared edit). */
 async function accessibleEntry(
   ctx: MutationCtx,
@@ -116,6 +127,7 @@ export const add = mutation({
       edited: false,
       done: false,
       pinned: false,
+      focused: false,
       status: "todo",
       order: now,
       mentions,
@@ -185,6 +197,7 @@ export const restore = mutation({
       edited: false,
       done,
       pinned,
+      focused: false,
       status,
       order,
       mentions,
@@ -213,6 +226,24 @@ export const togglePin = mutation({
   },
 });
 
+/**
+ * Set (or toggle off) the singleton "right now" focus task. Setting it clears
+ * the flag on the caller's other entries first, so only one is ever focused.
+ */
+export const setFocus = mutation({
+  args: { id: v.id("entries") },
+  handler: async (ctx, { id }) => {
+    const userId = await requireUser(ctx);
+    const entry = await accessibleEntry(ctx, userId, id);
+    if (entry.focused) {
+      await ctx.db.patch(id, { focused: false });
+      return;
+    }
+    await clearFocusFlags(ctx, userId);
+    await ctx.db.patch(id, { focused: true });
+  },
+});
+
 /** Board drag: set column + manual position, syncing done/tag. */
 export const moveCard = mutation({
   args: {
@@ -225,7 +256,16 @@ export const moveCard = mutation({
     const userId = await requireUser(ctx);
     const entry = await accessibleEntry(ctx, userId, id);
     const changed = applyStatus(entry, status, taskTags);
-    await ctx.db.patch(id, { ...changed, status, order });
+    // Moving a card into "In Progress" makes it the single "right now"; moving
+    // the current right-now card out of "In Progress" clears it.
+    let focusPatch: { focused: boolean } | undefined;
+    if (status === "doing") {
+      await clearFocusFlags(ctx, userId);
+      focusPatch = { focused: true };
+    } else if (entry.focused) {
+      focusPatch = { focused: false };
+    }
+    await ctx.db.patch(id, { ...changed, status, order, ...focusPatch });
   },
 });
 

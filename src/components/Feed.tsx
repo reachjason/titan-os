@@ -25,6 +25,7 @@ interface Props {
   onDelete: (id: string) => void;
   onToggleDone: (id: string) => void;
   onTogglePin: (id: string) => void;
+  onSetFocus: (id: string) => void;
   onSetOrder: (id: string, order: number) => void;
 }
 
@@ -79,6 +80,7 @@ export function Feed(props: Props) {
     onDelete,
     onToggleDone,
     onTogglePin,
+    onSetFocus,
     onSetOrder,
   } = props;
 
@@ -123,6 +125,7 @@ export function Feed(props: Props) {
       onDelete={onDelete}
       onToggleDone={onToggleDone}
       onTogglePin={onTogglePin}
+      onSetFocus={onSetFocus}
     />
   );
 

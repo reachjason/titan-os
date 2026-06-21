@@ -18,6 +18,7 @@ interface Props {
   onDelete: (id: string) => void;
   onToggleDone: (id: string) => void;
   onTogglePin: (id: string) => void;
+  onSetFocus: (id: string) => void;
 }
 
 /** Always-visible tray of pinned tasks, sitting just under the header. */
@@ -37,6 +38,7 @@ export function PinnedNotch({
   onDelete,
   onToggleDone,
   onTogglePin,
+  onSetFocus,
 }: Props) {
   if (entries.length === 0) return null;
   return (
@@ -71,6 +73,7 @@ export function PinnedNotch({
             onDelete={onDelete}
             onToggleDone={onToggleDone}
             onTogglePin={onTogglePin}
+            onSetFocus={onSetFocus}
           />
           ))}
         </div>

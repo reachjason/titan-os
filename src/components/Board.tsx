@@ -14,6 +14,7 @@ interface Props {
   entries: Entry[];
   onMove: (id: string, status: TaskStatus, order: number) => void;
   onTogglePin: (id: string) => void;
+  onSetFocus: (id: string) => void;
   onDelete: (id: string) => void;
   onTagClick: (tag: string) => void;
 }
@@ -26,6 +27,7 @@ interface CardProps {
   onDragOver: () => void;
   onDropBefore: () => void;
   onTogglePin: (id: string) => void;
+  onSetFocus: (id: string) => void;
   onDelete: (id: string) => void;
   onTagClick: (tag: string) => void;
 }
@@ -38,6 +40,7 @@ function Card({
   onDragOver,
   onDropBefore,
   onTogglePin,
+  onSetFocus,
   onDelete,
   onTagClick,
 }: CardProps) {
@@ -99,6 +102,14 @@ function Card({
         ) : (
           <>
             <button
+              className={`icon-btn${entry.focused ? " icon-focused" : ""}`}
+              title={entry.focused ? "Clear right now" : "Set as right now"}
+              aria-pressed={!!entry.focused}
+              onClick={() => onSetFocus(entry.id)}
+            >
+              {entry.focused ? "◉" : "◎"}
+            </button>
+            <button
               className={`icon-btn${entry.pinned ? " icon-pinned" : ""}`}
               title={entry.pinned ? "Unpin" : "Pin"}
               onClick={() => onTogglePin(entry.id)}
@@ -119,7 +130,7 @@ function Card({
   );
 }
 
-export function Board({ entries, onMove, onTogglePin, onDelete, onTagClick }: Props) {
+export function Board({ entries, onMove, onTogglePin, onSetFocus, onDelete, onTagClick }: Props) {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [overCol, setOverCol] = useState<TaskStatus | null>(null);
   // Default to a focus board: only pinned/starred entries. Toggle to see all.
@@ -210,6 +221,7 @@ export function Board({ entries, onMove, onTogglePin, onDelete, onTagClick }: Pr
                   }}
                   onDropBefore={() => drop(col.key, orderBefore(list, e))}
                   onTogglePin={onTogglePin}
+                  onSetFocus={onSetFocus}
                   onDelete={onDelete}
                   onTagClick={onTagClick}
                 />

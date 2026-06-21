@@ -20,6 +20,7 @@ function toEntry(doc: ListItem): Entry {
     edited: doc.edited,
     done: doc.done,
     pinned: doc.pinned,
+    focused: doc.focused,
     status: doc.status,
     order: doc.order,
     mentions: doc.mentions,
@@ -42,6 +43,7 @@ export function useEntries() {
   const restoreM = useMutation(api.entries.restore);
   const toggleDoneM = useMutation(api.entries.toggleDone);
   const togglePinM = useMutation(api.entries.togglePin);
+  const setFocusM = useMutation(api.entries.setFocus);
   const moveCardM = useMutation(api.entries.moveCard);
   const setOrderM = useMutation(api.entries.setOrder);
 
@@ -82,6 +84,10 @@ export function useEntries() {
     (id: string) => void togglePinM({ id: id as Id<"entries"> }),
     [togglePinM]
   );
+  const setFocus = useCallback(
+    (id: string) => void setFocusM({ id: id as Id<"entries"> }),
+    [setFocusM]
+  );
   const moveCard = useCallback(
     (id: string, status: TaskStatus, order: number, taskTags: string[]) =>
       void moveCardM({ id: id as Id<"entries">, status, order, taskTags }),
@@ -111,6 +117,7 @@ export function useEntries() {
     restore,
     toggleDone,
     togglePin,
+    setFocus,
     moveCard,
     setOrder,
     importEntries,

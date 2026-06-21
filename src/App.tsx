@@ -3,13 +3,15 @@ import { Authenticated, Unauthenticated, AuthLoading, useQuery } from "convex/re
 import { api } from "../convex/_generated/api";
 import { useEntries } from "./store/useEntries";
 import { useTheme } from "./store/useTheme";
-import { usePrefs } from "./store/usePrefs";
+import { usePrefs, isTask } from "./store/usePrefs";
 import { ThemeContext } from "./store/ThemeContext";
 import { Feed } from "./components/Feed";
 import { TerminalBar, type TerminalBarHandle } from "./components/TerminalBar";
 import { SettingsModal } from "./components/SettingsModal";
 import { HelpModal } from "./components/HelpModal";
 import { PinnedNotch } from "./components/PinnedNotch";
+import { NowNotch } from "./components/NowNotch";
+import { NowModal } from "./components/NowModal";
 import { Board } from "./components/Board";
 import { TagChip } from "./components/TagChip";
 import { Spotlight } from "./components/Spotlight";
@@ -70,6 +72,7 @@ function Workspace() {
     restore,
     toggleDone,
     togglePin,
+    setFocus: setFocusTask,
     moveCard,
     setOrder,
     importEntries,
@@ -97,6 +100,7 @@ function Workspace() {
   const [accountOpen, setAccountOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
   const [focus, setFocus] = useState(false);
+  const [nowOpen, setNowOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [highlightedEntryId, setHighlightedEntryId] = useState<string | null>(null);
   const [pendingOpenId, setPendingOpenId] = useState<string | null>(null);
@@ -236,6 +240,15 @@ function Workspace() {
     [entries]
   );
   const pinned = useMemo(() => entries.filter((e) => e.pinned), [entries]);
+  // The single "right now" task. Read from the unfiltered set so it stays
+  // reachable even under an active tag/search filter.
+  const nowEntry = useMemo(() => entries.find((e) => e.focused), [entries]);
+
+  const setFocusEntry = (id: string) => {
+    const wasFocused = entries.find((e) => e.id === id)?.focused;
+    setFocusTask(id);
+    flash(wasFocused ? "Cleared right now" : "Set as right now");
+  };
 
   const filtered = useMemo(() => {
     // Tag + @mention filters, plus an optional free-text query (same matcher as
@@ -306,6 +319,11 @@ function Workspace() {
     };
   }, []);
 
+  // Close the single-task modal if its task stops being the "right now".
+  useEffect(() => {
+    if (!nowEntry) setNowOpen(false);
+  }, [nowEntry]);
+
   // Global keyboard shortcuts.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -316,6 +334,7 @@ function Workspace() {
         if (spotOpen) setSpotOpen(false);
         else if (settingsOpen) setSettingsOpen(false);
         else if (helpOpen) setHelpOpen(false);
+        else if (nowOpen) setNowOpen(false);
         else if (accountOpen) setAccountOpen(false);
         else if (filterOpen) setFilterOpen(false);
         else if (focus) setFocus(false);
@@ -350,7 +369,7 @@ function Workspace() {
         return;
       }
 
-      if (spotOpen || settingsOpen || helpOpen || accountOpen) return;
+      if (spotOpen || settingsOpen || helpOpen || accountOpen || nowOpen) return;
 
       // Shift+F → Spotlight search.
       if (e.shiftKey && k === config.shortcuts.search) {
@@ -435,6 +454,7 @@ function Workspace() {
     helpOpen,
     accountOpen,
     filterOpen,
+    nowOpen,
     toggleTimestamps,
     toggleTags,
   ]);
@@ -683,12 +703,21 @@ function Workspace() {
           </div>
         )}
 
+        {nowEntry && (
+          <NowNotch
+            entry={nowEntry}
+            onOpen={() => setNowOpen(true)}
+            onClear={() => setFocusEntry(nowEntry.id)}
+          />
+        )}
+
         {view === "board" ? (
           <main className={feedAreaClass} onScroll={handleFeedScroll}>
             <Board
               entries={filtered}
               onMove={moveCardEntry}
               onTogglePin={togglePinEntry}
+              onSetFocus={setFocusEntry}
               onDelete={deleteEntry}
               onTagClick={toggleTag}
             />
@@ -712,6 +741,7 @@ function Workspace() {
                 onDelete={deleteEntry}
                 onToggleDone={toggleDoneEntry}
                 onTogglePin={togglePinEntry}
+                onSetFocus={setFocusEntry}
               />
             )}
 
@@ -733,6 +763,7 @@ function Workspace() {
                 onDelete={deleteEntry}
                 onToggleDone={toggleDoneEntry}
                 onTogglePin={togglePinEntry}
+                onSetFocus={setFocusEntry}
                 onSetOrder={setOrderEntry}
               />
             </main>
@@ -817,6 +848,22 @@ function Workspace() {
           />
         )}
         {helpOpen && <HelpModal onClose={() => setHelpOpen(false)} />}
+        {nowOpen && nowEntry && (
+          <NowModal
+            entry={nowEntry}
+            checkable={isTask(nowEntry.tags, prefs.taskTags) || !!nowEntry.done}
+            activeTags={filter.tags}
+            activeMentions={filter.mentions}
+            onClose={() => setNowOpen(false)}
+            onTagClick={toggleTag}
+            onMentionClick={toggleMention}
+            onEdit={editEntry}
+            onDelete={deleteEntry}
+            onToggleDone={toggleDoneEntry}
+            onTogglePin={togglePinEntry}
+            onSetFocus={setFocusEntry}
+          />
+        )}
         {toast && <Toast message={toast} onDone={() => setToast(null)} />}
       </div>
     </ThemeContext.Provider>
