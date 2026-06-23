@@ -12,6 +12,8 @@ const SHORTCUTS: { keys: string[]; label: string }[] = [
   { keys: ["1"], label: "List view" },
   { keys: ["2"], label: "Board view" },
   { keys: ["3"], label: "Review view" },
+  { keys: ["e"], label: "Review: expand all days" },
+  { keys: ["c"], label: "Review: collapse all days" },
   { keys: ["esc"], label: "Dismiss / close" },
   { keys: ["v"], label: "List / Board" },
   { keys: ["p"], label: "Focus pinned" },
