@@ -736,18 +736,6 @@ body {
   border-radius: 14px;
   box-shadow: 0 1px 2px color-mix(in srgb, var(--clay) 14%, transparent);
 }
-button.now-card-empty {
-  cursor: pointer;
-  text-align: left;
-  background: color-mix(in srgb, var(--clay) 5%, var(--bg));
-  border: 1px dashed color-mix(in srgb, var(--clay) 32%, var(--line));
-  box-shadow: none;
-  transition: background 0.14s, border-color 0.14s;
-}
-button.now-card-empty:hover {
-  background: color-mix(in srgb, var(--clay) 9%, var(--bg));
-  border-color: color-mix(in srgb, var(--clay) 45%, var(--line));
-}
 .now-glyph {
   flex-shrink: 0;
   color: var(--clay);
@@ -801,11 +789,6 @@ button.now-card-empty:hover {
 }
 .now-card-body:hover .now-task-text {
   color: var(--clay-deep);
-}
-.now-empty-prompt {
-  color: var(--ink-soft);
-  font-size: 15px;
-  line-height: 1.35;
 }
 .now-clear {
   flex-shrink: 0;

@@ -729,12 +729,13 @@ function Workspace() {
           </div>
         )}
 
-        <NowNotch
-          entry={nowEntry}
-          onOpen={() => setNowOpen(true)}
-          onClear={() => nowEntry && setFocusEntry(nowEntry.id)}
-          onCompose={() => barRef.current?.focus()}
-        />
+        {nowEntry && (
+          <NowNotch
+            entry={nowEntry}
+            onOpen={() => setNowOpen(true)}
+            onClear={() => setFocusEntry(nowEntry.id)}
+          />
+        )}
 
         {view === "board" ? (
           <main className={feedAreaClass} onScroll={handleFeedScroll}>
