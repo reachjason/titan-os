@@ -8,6 +8,9 @@
   --row-lh: 23px;
   /* Toggle "off" track — set per theme below. */
   --switch-off: #e4dccd;
+  /* Subtle edge on images/avatars so they don't float. Pure black/white only
+     (a tinted neutral picks up the surface color and reads as dirt). */
+  --img-outline: rgba(0, 0, 0, 0.1);
 
   /* Motion — strong custom curves; the built-in CSS easings are too weak.
      Entrances use ease-out (instant feedback); on-screen movement uses
@@ -21,6 +24,7 @@
 
 :root[data-theme="dark"] {
   --switch-off: #3a332c;
+  --img-outline: rgba(255, 255, 255, 0.1);
 }
 
 * {
@@ -204,6 +208,7 @@ body {
   border-radius: 99px;
   padding: 0 5px;
   line-height: 15px;
+  font-variant-numeric: tabular-nums;
 }
 .filter-menu {
   position: absolute;
@@ -214,7 +219,7 @@ body {
   background: var(--bg-raised);
   border: 1px solid var(--line);
   border-radius: 12px;
-  padding: 8px;
+  padding: 6px;
   box-shadow: var(--shadow-strong);
   font-family: var(--font-body);
   outline: none;
@@ -283,6 +288,8 @@ body {
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
+  outline: 1px solid var(--img-outline);
+  outline-offset: -1px;
 }
 .filter-avatar-fallback {
   display: inline-flex;
@@ -302,7 +309,7 @@ body {
   background: none;
   cursor: pointer;
   padding: 5px 6px;
-  border-radius: 8px;
+  border-radius: 6px;
   text-align: left;
   transition: background 0.12s, transform var(--dur-press) var(--ease-out);
 }
@@ -407,6 +414,9 @@ body {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  /* outline (not inset shadow) — a replaced <img> paints over inset shadows. */
+  outline: 1px solid var(--img-outline);
+  outline-offset: -1px;
 }
 .account-menu {
   position: absolute;
@@ -445,6 +455,8 @@ body {
 }
 .account-avatar-img {
   object-fit: cover;
+  outline: 1px solid var(--img-outline);
+  outline-offset: -1px;
 }
 .account-id {
   display: flex;
@@ -472,7 +484,7 @@ body {
   background: none;
   text-align: left;
   padding: 8px 10px;
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
   font-family: var(--font-body);
   font-size: 13px;
@@ -623,6 +635,7 @@ body {
   font-family: var(--font-display);
   font-size: 24px;
   color: var(--ink);
+  text-wrap: balance;
 }
 .firstrun-sub {
   font-size: 13.5px;
@@ -692,6 +705,7 @@ body {
 }
 .pin-toggle-count {
   letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
 }
 .pin-toggle-chev {
   margin-left: auto;
@@ -809,6 +823,7 @@ body {
   padding: 2px 2px 4px;
   white-space: pre-wrap;
   word-break: break-word;
+  text-wrap: pretty;
 }
 .now-modal-body-done {
   color: var(--ink-faint);
@@ -845,6 +860,7 @@ body {
   font-size: 11px;
   color: var(--ink-faint);
   flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
 }
 .now-modal-actions {
   display: flex;
@@ -996,6 +1012,7 @@ body {
   color: var(--ink);
   vertical-align: middle;
   white-space: pre-wrap; /* preserve multiline entries */
+  text-wrap: pretty;
 }
 .row-body mark {
   background: var(--mark);
@@ -1445,12 +1462,23 @@ button.mention:hover {
   white-space: nowrap;
 }
 .modal-close {
+  position: relative;
   border: none;
   background: none;
   cursor: pointer;
   font-size: 15px;
   color: var(--ink-faint);
   transition: color 0.12s, transform var(--dur-press) var(--ease-out);
+}
+/* Extend the tap target to 40×40 without growing the visible glyph. */
+.modal-close::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 40px;
+  height: 40px;
+  transform: translate(-50%, -50%);
 }
 .modal-close:hover {
   color: var(--ink);
@@ -1793,12 +1821,14 @@ kbd {
   font-family: var(--font-display);
   font-size: 16px;
   color: var(--ink);
+  text-wrap: balance;
 }
 .column-count {
   font-family: var(--font-mono);
   font-size: 10px;
   color: var(--ink-soft);
   background: var(--bg-sunk);
+  font-variant-numeric: tabular-nums;
   border-radius: 99px;
   padding: 1px 7px;
 }
@@ -1865,6 +1895,7 @@ kbd {
   line-height: 1.45;
   white-space: pre-wrap;
   word-break: break-word;
+  text-wrap: pretty;
 }
 .card-empty {
   color: var(--ink-faint);
@@ -2094,6 +2125,7 @@ kbd {
   font-size: 11px;
   color: var(--ink-faint);
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 .spot-foot {
   display: flex;
