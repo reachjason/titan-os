@@ -2043,8 +2043,10 @@ kbd {
   gap: 10px;
 }
 .column-empty {
-  flex: 1;
-  min-height: 72px;
+  /* A compact drop hint, not a full-height box — the whole column body is
+     still the drop target, this is just the visual cue. */
+  flex: 0 0 auto;
+  min-height: 56px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2062,17 +2064,18 @@ kbd {
   color: var(--clay);
 }
 .card {
+  position: relative;
   background: var(--bg-raised);
-  border: 1px solid var(--line);
   border-radius: 10px;
-  padding: 13px;
-  box-shadow: var(--shadow);
+  padding: 11px 12px;
+  box-shadow: var(--shadow-card);
   cursor: grab;
-  transition: border-color 0.12s, transform var(--dur-press) var(--ease-out),
+  transition: box-shadow 0.14s, transform var(--dur-press) var(--ease-out),
     opacity 0.12s;
 }
 .card:hover {
-  border-color: var(--dot);
+  /* Lift on hover with the larger raised-surface shadow. */
+  box-shadow: var(--shadow);
 }
 .card:active {
   cursor: grabbing;
@@ -2088,8 +2091,12 @@ kbd {
   text-decoration: line-through;
   color: var(--ink-faint);
 }
+/* Pinned/focus cards stand out with a clay ring instead of a hard border. */
 .card-pinned {
-  border-color: var(--clay);
+  box-shadow: 0 0 0 1.5px var(--clay), var(--shadow-card);
+}
+.card-pinned:hover {
+  box-shadow: 0 0 0 1.5px var(--clay), var(--shadow);
 }
 .card-body {
   font-size: 13.5px;
@@ -2103,27 +2110,30 @@ kbd {
   color: var(--ink-faint);
   font-style: italic;
 }
-.card-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-  margin-top: 8px;
-}
+/* Actions float top-right as a small cluster, revealed on hover — so they
+   take no layout space and the card collapses to just its content. */
 .card-actions {
+  position: absolute;
+  top: 6px;
+  right: 6px;
   display: flex;
-  gap: 2px;
-  justify-content: flex-end;
+  gap: 1px;
   align-items: center;
-  margin-top: 6px;
-  min-height: 22px;
+  padding: 2px;
+  border-radius: 8px;
+  background: var(--bg-raised);
+  box-shadow: var(--shadow-card);
   opacity: 0;
   transition: opacity 0.12s;
 }
 .card:hover .card-actions {
   opacity: 1;
 }
-.card-pinned .card-actions {
-  opacity: 1;
+@media (hover: none) {
+  /* Touch has no hover — keep actions reachable. */
+  .card-actions {
+    opacity: 1;
+  }
 }
 
 /* ---------- List manual reorder ---------- */

@@ -1,7 +1,6 @@
 import { useState } from "react";
 import type { Entry, TaskStatus } from "../types";
 import { statusOf, orderOf } from "../lib/tasks";
-import { TagChip } from "./TagChip";
 import { renderMarkdown } from "../lib/markdown";
 
 const COLUMNS: { key: TaskStatus; label: string }[] = [
@@ -77,18 +76,6 @@ function Card({
           <span className="card-empty">(empty)</span>
         )}
       </div>
-      {(() => {
-        const orphan = entry.tags.filter(
-          (t) => !new RegExp(`(?:^|\\s)/${t}(?![a-z0-9_-])`, "i").test(entry.body)
-        );
-        return orphan.length > 0 ? (
-          <div className="card-tags">
-            {orphan.map((t) => (
-              <TagChip key={t} tag={t} onClick={onTagClick} />
-            ))}
-          </div>
-        ) : null;
-      })()}
       <div className="card-actions">
         {confirming ? (
           <>

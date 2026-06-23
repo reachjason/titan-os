@@ -17,6 +17,7 @@ const VAR_MAP: Record<keyof typeof config.theme.light, string> = {
   scrim: "--scrim",
   shadow: "--shadow",
   shadowStrong: "--shadow-strong",
+  shadowCard: "--shadow-card",
   toastBg: "--toast-bg",
   toastInk: "--toast-ink",
 };

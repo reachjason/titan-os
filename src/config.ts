@@ -44,6 +44,8 @@ export interface ThemeTokens {
   shadow: string;
   /** Stronger shadow for modals / Spotlight. */
   shadowStrong: string;
+  /** Tight, contained shadow for small cards (board). */
+  shadowCard: string;
   /** Toast background + text (inverted). */
   toastBg: string;
   toastInk: string;
@@ -144,6 +146,7 @@ export const config = {
       scrim: "rgba(40,30,20,.28)",
       shadow: "0 1px 2px rgba(40,30,20,.06), 0 12px 32px rgba(40,30,20,.10)",
       shadowStrong: "0 24px 60px rgba(40,30,20,.30)",
+      shadowCard: "0 1px 2px rgba(40,30,20,.05), 0 2px 6px rgba(40,30,20,.06)",
       toastBg: "#2a2521",
       toastInk: "#f3ece1",
     } as ThemeTokens,
@@ -162,6 +165,7 @@ export const config = {
       scrim: "rgba(10,8,6,.62)",
       shadow: "0 1px 2px rgba(0,0,0,.4), 0 12px 32px rgba(0,0,0,.4)",
       shadowStrong: "0 24px 60px rgba(0,0,0,.55)",
+      shadowCard: "0 1px 2px rgba(0,0,0,.35), 0 2px 6px rgba(0,0,0,.4)",
       toastBg: "#f3ece1",
       toastInk: "#2a2521",
     } as ThemeTokens,
