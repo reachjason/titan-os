@@ -8,6 +8,15 @@
   --row-lh: 23px;
   /* Toggle "off" track — set per theme below. */
   --switch-off: #e4dccd;
+
+  /* Motion — strong custom curves; the built-in CSS easings are too weak.
+     Entrances use ease-out (instant feedback); on-screen movement uses
+     ease-in-out. Keep UI durations under 300ms. */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --dur-press: 130ms;
+  --dur-pop: 160ms;
+  --dur-menu: 150ms;
 }
 
 :root[data-theme="dark"] {
@@ -91,10 +100,13 @@ body {
   font-size: 13px;
   color: var(--ink-faint);
   padding: 0 0 2px;
-  transition: color 0.12s;
+  transition: color 0.12s, transform var(--dur-press) var(--ease-out);
 }
 .view-link:hover {
   color: var(--ink-soft);
+}
+.view-link:active {
+  transform: scale(0.96);
 }
 .view-on {
   color: var(--ink);
@@ -115,10 +127,13 @@ body {
   line-height: 1;
   color: var(--ink-faint);
   padding: 0;
-  transition: color 0.12s;
+  transition: color 0.12s, transform var(--dur-press) var(--ease-out);
 }
 .sort-glyph:hover {
   color: var(--ink-soft);
+}
+.sort-glyph:active {
+  transform: scale(0.92);
 }
 .sort-on {
   color: var(--clay);
@@ -135,10 +150,13 @@ body {
   color: var(--ink-faint);
   font-family: var(--font-mono);
   font-size: 13px;
-  transition: color 0.12s;
+  transition: color 0.12s, transform var(--dur-press) var(--ease-out);
 }
 .search-trigger:hover {
   color: var(--ink-soft);
+}
+.search-trigger:active {
+  transform: scale(0.96);
 }
 .search-glyph {
   font-size: 14px;
@@ -164,10 +182,13 @@ body {
   cursor: pointer;
   color: var(--ink-faint);
   padding: 0;
-  transition: color 0.12s;
+  transition: color 0.12s, transform var(--dur-press) var(--ease-out);
 }
 .filter-trigger:hover {
   color: var(--ink-soft);
+}
+.filter-trigger:active {
+  transform: scale(0.92);
 }
 .filter-on {
   color: var(--clay);
@@ -197,6 +218,19 @@ body {
   box-shadow: var(--shadow-strong);
   font-family: var(--font-body);
   outline: none;
+  /* Scale in from the trigger (top-left), not from the menu's own center. */
+  transform-origin: top left;
+  animation: menu-pop-in var(--dur-menu) var(--ease-out);
+}
+@keyframes menu-pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 .filter-menu-head {
   display: flex;
@@ -270,9 +304,13 @@ body {
   padding: 5px 6px;
   border-radius: 8px;
   text-align: left;
+  transition: background 0.12s, transform var(--dur-press) var(--ease-out);
 }
 .filter-menu-item:hover {
   background: var(--bg-sunk);
+}
+.filter-menu-item:active {
+  transform: scale(0.98);
 }
 .filter-menu-item-active {
   background: var(--bg-sunk);
@@ -317,10 +355,13 @@ body {
   font-family: var(--font-mono);
   font-size: 13px;
   color: var(--ink-faint);
-  transition: color 0.12s;
+  transition: color 0.12s, transform var(--dur-press) var(--ease-out);
 }
 .util-link:hover {
   color: var(--ink-soft);
+}
+.util-link:active {
+  transform: scale(0.96);
 }
 .theme-toggle {
   display: flex;
@@ -379,6 +420,9 @@ body {
   padding: 6px;
   box-shadow: var(--shadow-strong);
   font-family: var(--font-body);
+  /* Anchored under the avatar on the right — scale from the top-right. */
+  transform-origin: top right;
+  animation: menu-pop-in var(--dur-menu) var(--ease-out);
 }
 .account-head {
   display: flex;
@@ -433,6 +477,10 @@ body {
   font-family: var(--font-body);
   font-size: 13px;
   color: var(--ink-soft);
+  transition: background 0.12s, color 0.12s, transform var(--dur-press) var(--ease-out);
+}
+.account-item:active {
+  transform: scale(0.98);
 }
 .account-item:hover {
   background: var(--bg-sunk);
@@ -814,11 +862,15 @@ body {
   padding: 6px 10px;
   border-radius: 8px;
   line-height: 1;
-  transition: background 0.12s, color 0.12s, border-color 0.12s;
+  transition: background 0.12s, color 0.12s, border-color 0.12s,
+    transform var(--dur-press) var(--ease-out);
 }
 .now-act:hover {
   background: var(--bg-sunk);
   color: var(--ink);
+}
+.now-act:active {
+  transform: scale(0.96);
 }
 .now-act-on {
   color: var(--clay);
@@ -852,7 +904,7 @@ body {
   background: var(--bg-sunk);
 }
 .row-highlight {
-  animation: row-open-pulse 1.5s ease-out;
+  animation: row-open-pulse 0.6s var(--ease-out);
 }
 @keyframes row-open-pulse {
   0% {
@@ -1096,10 +1148,14 @@ button.mention:hover {
   padding: 3px 5px;
   border-radius: 5px;
   line-height: 1;
+  transition: background 0.12s, color 0.12s, transform var(--dur-press) var(--ease-out);
 }
 .icon-btn:hover {
   background: var(--bg-raised);
   color: var(--ink);
+}
+.icon-btn:active {
+  transform: scale(0.9);
 }
 .icon-pinned:hover,
 .icon-pinned {
@@ -1169,11 +1225,17 @@ button.mention:hover {
   white-space: nowrap;
   border: none;
   /* background + color are set inline per-tag, per-theme (tagColors.ts). */
-  transition: transform 0.1s, box-shadow 0.1s, filter 0.1s;
+  transition: transform var(--dur-press) var(--ease-out), box-shadow 0.1s, filter 0.1s;
 }
-.chip:hover {
-  transform: translateY(-1px);
-  filter: brightness(1.06);
+/* Touch taps fire :hover too, leaving the lift stuck — gate it to real pointers. */
+@media (hover: hover) and (pointer: fine) {
+  .chip:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.06);
+  }
+}
+.chip:active {
+  transform: scale(0.96);
 }
 .chip-active {
   box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px var(--clay);
@@ -1249,11 +1311,14 @@ button.mention:hover {
   margin-bottom: 5px;
   border-radius: 8px;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background 0.15s, transform var(--dur-press) var(--ease-out);
   flex-shrink: 0;
 }
 .send-btn:hover {
   background: var(--clay-deep);
+}
+.send-btn:active {
+  transform: scale(0.94);
 }
 
 /* ---------- Autocomplete ---------- */
@@ -1280,11 +1345,15 @@ button.mention:hover {
   border-radius: 8px;
   cursor: pointer;
   color: var(--ink-soft);
+  transition: transform var(--dur-press) var(--ease-out);
 }
 .suggest li:hover,
 .suggest-active {
   background: var(--bg-sunk);
   color: var(--ink);
+}
+.suggest li:active {
+  transform: scale(0.98);
 }
 .suggest-hint {
   font-family: var(--font-body);
@@ -1328,6 +1397,7 @@ button.mention:hover {
   justify-content: center;
   z-index: 900;
   padding: 9vh 20px;
+  animation: now-scrim-in 0.18s var(--ease-out);
 }
 .modal-overlay-centered {
   align-items: center;
@@ -1343,6 +1413,19 @@ button.mention:hover {
   max-height: 85vh;
   overflow-y: auto;
   padding: 20px;
+  /* Modals aren't anchored to a trigger — scale from their own center. */
+  transform-origin: center;
+  animation: modal-pop-in 0.2s var(--ease-out);
+}
+@keyframes modal-pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 .modal-wide {
   max-width: 460px;
@@ -1367,9 +1450,13 @@ button.mention:hover {
   cursor: pointer;
   font-size: 15px;
   color: var(--ink-faint);
+  transition: color 0.12s, transform var(--dur-press) var(--ease-out);
 }
 .modal-close:hover {
   color: var(--ink);
+}
+.modal-close:active {
+  transform: scale(0.9);
 }
 
 /* Shortcuts overlay — two-column grid of label · key */
@@ -1749,13 +1836,15 @@ kbd {
   padding: 13px;
   box-shadow: var(--shadow);
   cursor: grab;
-  transition: border-color 0.12s, transform 0.08s, opacity 0.12s;
+  transition: border-color 0.12s, transform var(--dur-press) var(--ease-out),
+    opacity 0.12s;
 }
 .card:hover {
   border-color: var(--dot);
 }
 .card:active {
   cursor: grabbing;
+  transform: scale(0.985);
 }
 .card-dragging {
   opacity: 0.4;
@@ -2123,11 +2212,15 @@ kbd {
   font-weight: 500;
   padding: 13px 18px;
   cursor: pointer;
-  transition: background 0.15s, opacity 0.15s;
+  transition: background 0.15s, opacity 0.15s,
+    transform var(--dur-press) var(--ease-out);
   margin-top: 4px;
 }
 .signin-btn:hover {
   background: var(--clay-deep);
+}
+.signin-btn:active:not(:disabled) {
+  transform: scale(0.98);
 }
 .signin-btn:disabled {
   opacity: 0.65;
@@ -2162,6 +2255,50 @@ kbd {
 @media (hover: none) {
   .row-actions .icon-btn {
     opacity: 1;
+  }
+}
+
+/* Reduced motion: keep opacity fades (they aid comprehension), drop all
+   movement, scale, and the row pulse. Not zero animation — gentler. */
+@keyframes fade-in-only {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .now-modal,
+  .modal,
+  .filter-menu,
+  .account-menu,
+  .now-modal-overlay,
+  .modal-overlay,
+  .toast {
+    animation-name: fade-in-only;
+  }
+  .row-highlight {
+    animation: none;
+  }
+  .check:active::before,
+  .view-link:active,
+  .sort-glyph:active,
+  .search-trigger:active,
+  .filter-trigger:active,
+  .util-link:active,
+  .filter-menu-item:active,
+  .account-item:active,
+  .icon-btn:active,
+  .chip:active,
+  .chip:hover,
+  .send-btn:active,
+  .suggest li:active,
+  .modal-close:active,
+  .now-act:active,
+  .card:active,
+  .signin-btn:active:not(:disabled) {
+    transform: none;
   }
 }
 
