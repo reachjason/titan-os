@@ -13,6 +13,7 @@ import { PinnedNotch } from "./components/PinnedNotch";
 import { NowNotch } from "./components/NowNotch";
 import { NowModal } from "./components/NowModal";
 import { Board } from "./components/Board";
+import { ReviewView } from "./components/ReviewView";
 import { TagChip } from "./components/TagChip";
 import { Spotlight } from "./components/Spotlight";
 import { AccountMenu } from "./components/AccountMenu";
@@ -405,6 +406,13 @@ function Workspace() {
         return;
       }
 
+      if (k === "3") {
+        e.preventDefault();
+        setView("review");
+        setFilterOpen(false);
+        return;
+      }
+
       // F → filter menu. Enter can then toggle multiple tags; Esc closes it.
       if (k === config.shortcuts.search) {
         e.preventDefault();
@@ -561,6 +569,12 @@ function Workspace() {
             >
               board
             </button>
+            <button
+              className={`view-link${view === "review" ? " view-on" : ""}`}
+              onClick={() => setView("review")}
+            >
+              review
+            </button>
           </div>
 
           {view === "list" && (
@@ -687,7 +701,7 @@ function Workspace() {
           />
         </header>
 
-        {filtering && (
+        {filtering && view !== "review" && (
           <div className="filter-bar">
             <span className="filter-label">Filtering</span>
             {filter.query.trim() && (
@@ -746,6 +760,23 @@ function Workspace() {
               onSetFocus={setFocusEntry}
               onDelete={deleteEntry}
               onTagClick={toggleTag}
+            />
+          </main>
+        ) : view === "review" ? (
+          <main className={feedAreaClass} onScroll={handleFeedScroll}>
+            <ReviewView
+              entries={entries}
+              taskTags={prefs.taskTags}
+              activeTags={filter.tags}
+              activeMentions={filter.mentions}
+              highlightedEntryId={highlightedEntryId}
+              onTagClick={toggleTag}
+              onMentionClick={toggleMention}
+              onEdit={editEntry}
+              onDelete={deleteEntry}
+              onToggleDone={toggleDoneEntry}
+              onTogglePin={togglePinEntry}
+              onSetFocus={setFocusEntry}
             />
           </main>
         ) : (

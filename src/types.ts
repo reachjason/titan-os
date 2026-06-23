@@ -31,7 +31,7 @@ export interface Entry {
 
 export type TaskStatus = "todo" | "doing" | "done";
 
-export type ViewMode = "list" | "board";
+export type ViewMode = "list" | "board" | "review";
 
 /** User preferences, editable in Settings and persisted. */
 export interface Prefs {
