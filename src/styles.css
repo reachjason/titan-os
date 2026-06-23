@@ -721,25 +721,24 @@ body {
 }
 
 /* ---------- "Right now" notch: single focus task, top of workspace ---------- */
-/* ---------- "Right now": the hero focus card above the workspace ---------- */
+/* ---------- "Right now": a slim focus bar above the workspace ---------- */
 .now-card {
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 13px;
+  gap: 10px;
   width: 100%;
   max-width: 680px;
-  margin: 12px auto 6px;
-  padding: 14px 18px;
-  background: color-mix(in srgb, var(--clay) 11%, var(--bg-raised));
-  border: 1px solid color-mix(in srgb, var(--clay) 30%, var(--line));
-  border-radius: 14px;
-  box-shadow: 0 1px 2px color-mix(in srgb, var(--clay) 14%, transparent);
+  margin: 8px auto 2px;
+  padding: 6px 12px;
+  background: color-mix(in srgb, var(--clay) 9%, var(--bg-raised));
+  border: 1px solid color-mix(in srgb, var(--clay) 24%, var(--line));
+  border-radius: 9px;
 }
 .now-glyph {
   flex-shrink: 0;
   color: var(--clay);
-  font-size: 18px;
+  font-size: 13px;
   line-height: 1;
 }
 .now-glyph-live {
@@ -760,8 +759,9 @@ body {
   flex: 1;
   min-width: 0;
   display: flex;
-  flex-direction: column;
-  gap: 3px;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 9px;
   text-align: left;
   border: none;
   background: none;
@@ -770,29 +770,31 @@ body {
   font-family: inherit;
 }
 .now-label {
+  flex-shrink: 0;
   color: var(--clay);
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  font-size: 10px;
+  font-size: 9.5px;
   font-weight: 600;
   font-family: var(--font-mono);
 }
 .now-task-text {
+  flex: 1;
+  min-width: 0;
   color: var(--ink);
-  font-size: 16px;
-  line-height: 1.35;
+  font-size: 14px;
+  line-height: 1.4;
   font-weight: 500;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
+  white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
 }
 .now-card-body:hover .now-task-text {
   color: var(--clay-deep);
 }
 .now-clear {
   flex-shrink: 0;
-  align-self: flex-start;
+  align-self: center;
   border: none;
   background: none;
   cursor: pointer;
@@ -2041,6 +2043,10 @@ kbd {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  /* Horizontal room so card drop shadows aren't shaved by the overflow clip
+     (overflow-y:auto also clips the x axis). */
+  padding: 2px 6px;
+  margin: 0 -6px;
 }
 .column-empty {
   /* A compact drop hint, not a full-height box — the whole column body is
@@ -2091,12 +2097,13 @@ kbd {
   text-decoration: line-through;
   color: var(--ink-faint);
 }
-/* Pinned/focus cards stand out with a clay ring instead of a hard border. */
+/* Pinned/focus cards stand out with a clay ring. Inset so the scroll
+   container's overflow clip can't shave its edges. */
 .card-pinned {
-  box-shadow: 0 0 0 1.5px var(--clay), var(--shadow-card);
+  box-shadow: inset 0 0 0 1.5px var(--clay), var(--shadow-card);
 }
 .card-pinned:hover {
-  box-shadow: 0 0 0 1.5px var(--clay), var(--shadow);
+  box-shadow: inset 0 0 0 1.5px var(--clay), var(--shadow);
 }
 .card-body {
   font-size: 13.5px;
