@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { Entry } from "../types";
-import { TagChip } from "./TagChip";
 import { renderMarkdown } from "../lib/markdown";
-import { timeLabel } from "../lib/dates";
 import { config } from "../config";
 
 interface Props {
@@ -22,21 +20,15 @@ interface Props {
   onSetFocus: (id: string) => void;
 }
 
-/** Does the body contain this tag inline (as "/tag")? */
-function tagInBody(body: string, tag: string): boolean {
-  return new RegExp(`(?:^|\\s)/${tag}(?![a-z0-9_-])`, "i").test(body);
-}
-
 /**
- * Single-task focus overlay: the "right now" task, rendered large with the
- * text on top and its actions stacked underneath. Pops in to feel like
- * entering a focus mode; the log bar below stays usable.
+ * Single-task focus mode: the "right now" task, rendered large and centred as
+ * the one thing on screen, with a single primary "Mark done" and quiet utility
+ * icons beneath. Completing it celebrates, then clears the right-now flag and
+ * exits — you finished, so you leave focus.
  */
 export function NowModal({
   entry,
   checkable,
-  showTags,
-  activeTags,
   activeMentions,
   onClose,
   onTagClick,
@@ -52,21 +44,26 @@ export function NowModal({
   const [draft, setDraft] = useState(entry.raw);
   const [burst, setBurst] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const burstTimer = useRef<number | null>(null);
+  const exitTimer = useRef<number | null>(null);
   const done = !!entry.done;
 
-  const handleToggleDone = () => {
-    if (!done) {
-      if (burstTimer.current) window.clearTimeout(burstTimer.current);
-      setBurst(false);
-      requestAnimationFrame(() => setBurst(true));
-      burstTimer.current = window.setTimeout(() => setBurst(false), 900);
+  // Complete from focus mode: celebrate, then drop it from "right now" and exit.
+  const handleComplete = () => {
+    if (done) {
+      onToggleDone(entry.id); // already done → just toggle back, stay put
+      return;
     }
+    setBurst(true);
     onToggleDone(entry.id);
+    if (exitTimer.current) window.clearTimeout(exitTimer.current);
+    exitTimer.current = window.setTimeout(() => {
+      onSetFocus(entry.id); // clear the right-now flag
+      onClose(); // leave focus mode
+    }, 900);
   };
 
   useEffect(() => () => {
-    if (burstTimer.current) window.clearTimeout(burstTimer.current);
+    if (exitTimer.current) window.clearTimeout(exitTimer.current);
   }, []);
 
   useEffect(() => {
@@ -88,8 +85,6 @@ export function NowModal({
     setEditing(false);
   };
 
-  const orphanTags = showTags ? entry.tags.filter((t) => !tagInBody(entry.body, t)) : [];
-
   return (
     <div
       className="modal-overlay modal-overlay-centered now-modal-overlay"
@@ -101,14 +96,14 @@ export function NowModal({
         aria-label="Right now"
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <div className="modal-head">
-          <h2 className="modal-title">
-            <span className="now-glyph" aria-hidden="true">
+        <div className="now-modal-head">
+          <span className="now-modal-eyebrow">
+            <span className="now-glyph now-glyph-live" aria-hidden="true">
               ◉
-            </span>{" "}
-            Right now
-          </h2>
-          <button className="modal-close" onClick={onClose} aria-label="Close">
+            </span>
+            right now
+          </span>
+          <button className="now-modal-x" onClick={onClose} aria-label="Close">
             ✕
           </button>
         </div>
@@ -136,26 +131,13 @@ export function NowModal({
             onBlur={commit}
           />
         ) : (
-          <div className={`now-modal-body${done ? " now-modal-body-done" : ""}`}>
-            {orphanTags.length > 0 && (
-              <div className="now-modal-tags">
-                {orphanTags.map((t) => (
-                  <TagChip
-                    key={t}
-                    tag={t}
-                    active={activeTags.includes(t)}
-                    onClick={onTagClick}
-                  />
-                ))}
-              </div>
-            )}
+          <div className={`now-modal-task${done ? " now-modal-task-done" : ""}`}>
             {entry.body ? (
               renderMarkdown(entry.body, {
                 onMention: onMentionClick,
                 activeMentions,
                 onTag: onTagClick,
-                activeTags,
-                hideTags: !showTags,
+                hideTags: true,
               })
             ) : (
               <span className="now-modal-empty">(empty)</span>
@@ -176,53 +158,56 @@ export function NowModal({
             </div>
           ) : (
             <>
-              <span className="now-modal-time">{timeLabel(entry.createdAt)}</span>
-              <div className="now-modal-actions">
-                {checkable && (
-                  <button
-                    className={`now-act now-act-done${done ? " now-act-on" : ""}${
-                      burst ? " now-act-burst" : ""
-                    }`}
-                    onClick={handleToggleDone}
-                  >
-                    {done ? "✓ Done" : "Mark done"}
-                    {burst && (
-                      <span className="burst burst-big" aria-hidden="true">
-                        <span className="burst-ring" />
-                        {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
-                          <span
-                            key={i}
-                            className="burst-particle"
-                            style={{ ["--a" as string]: `${i * 45}deg` }}
-                          />
-                        ))}
-                      </span>
-                    )}
-                  </button>
-                )}
+              {checkable && (
                 <button
-                  className={`now-act${entry.pinned ? " now-act-on" : ""}`}
-                  onClick={() => onTogglePin(entry.id)}
+                  className={`now-primary${burst ? " now-primary-burst" : ""}`}
+                  onClick={handleComplete}
                 >
-                  {entry.pinned ? "★ Pinned" : "☆ Pin"}
+                  <span className="now-primary-check" aria-hidden="true">
+                    ✓
+                  </span>
+                  {done ? "Done" : "Mark done"}
+                  {burst && (
+                    <span className="burst burst-big" aria-hidden="true">
+                      <span className="burst-ring" />
+                      {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
+                        <span
+                          key={i}
+                          className="burst-particle"
+                          style={{ ["--a" as string]: `${i * 45}deg` }}
+                        />
+                      ))}
+                    </span>
+                  )}
                 </button>
-                <button className="now-act" onClick={() => setEditing(true)}>
-                  ✎ Edit
+              )}
+              <div className="now-modal-utils">
+                <button className="now-util" onClick={() => setEditing(true)} title="Edit">
+                  ✎
                 </button>
                 <button
-                  className="now-act now-act-clear"
+                  className={`now-util${entry.pinned ? " now-util-on" : ""}`}
+                  onClick={() => onTogglePin(entry.id)}
+                  title={entry.pinned ? "Unpin" : "Pin"}
+                  aria-pressed={!!entry.pinned}
+                >
+                  {entry.pinned ? "★" : "☆"}
+                </button>
+                <button
+                  className="now-util"
                   onClick={() => onSetFocus(entry.id)}
                   title="Clear the right-now task"
                 >
-                  ◉ Clear
+                  ◉
                 </button>
                 <button
-                  className="now-act now-act-danger"
+                  className="now-util now-util-danger"
                   onClick={() =>
                     config.ui.confirmOnDelete ? setConfirming(true) : onDelete(entry.id)
                   }
+                  title="Delete"
                 >
-                  ✕ Delete
+                  ✕
                 </button>
               </div>
             </>

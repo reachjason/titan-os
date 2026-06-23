@@ -811,11 +811,16 @@ body {
 
 /* ---------- "Right now" focus modal: text on top, actions beneath ---------- */
 .now-modal-overlay {
-  /* Dim the workspace but let it animate in like we're entering focus. */
+  /* Dim AND blur the workspace so focus mode feels immersive — the task is the
+     only thing in view. */
+  background: color-mix(in srgb, var(--scrim), #000 18%);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
   animation: now-scrim-in 0.18s ease-out;
 }
 .now-modal {
-  max-width: 520px;
+  max-width: 540px;
+  padding: 26px 30px 24px;
   transform-origin: center;
   animation: now-pop-in 0.26s cubic-bezier(0.2, 0.85, 0.25, 1);
 }
@@ -837,32 +842,58 @@ body {
     transform: scale(1) translateY(0);
   }
 }
-.now-modal .modal-title .now-glyph {
-  font-size: 18px;
-  vertical-align: -1px;
+.now-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
 }
-.now-modal-body {
-  font-family: var(--font-body);
-  font-size: 17px;
-  line-height: 1.55;
+.now-modal-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--clay);
+}
+.now-modal-eyebrow .now-glyph {
+  font-size: 13px;
+}
+.now-modal-x {
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--ink-faint);
+  font-size: 14px;
+  line-height: 1;
+  padding: 4px;
+  border-radius: 6px;
+  transition: color 0.12s, background 0.12s;
+}
+.now-modal-x:hover {
   color: var(--ink);
-  max-height: 46vh;
+  background: var(--bg-sunk);
+}
+/* The task is the hero: large, centred, the one thing on screen. */
+.now-modal-task {
+  font-family: var(--font-body);
+  font-size: 26px;
+  line-height: 1.32;
+  font-weight: 500;
+  color: var(--ink);
+  text-align: center;
+  text-wrap: pretty;
+  padding: 16px 4px 32px;
+  max-height: 48vh;
   overflow-y: auto;
-  padding: 2px 2px 4px;
   white-space: pre-wrap;
   word-break: break-word;
-  text-wrap: pretty;
 }
-.now-modal-body-done {
+.now-modal-task-done {
   color: var(--ink-faint);
-  text-decoration: line-through;
-  text-decoration-color: var(--ink-faint);
-}
-.now-modal-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 10px;
 }
 .now-modal-empty {
   color: var(--ink-faint);
@@ -870,69 +901,88 @@ body {
 }
 .now-modal-edit {
   width: 100%;
-  font-size: 17px;
-  line-height: 1.55;
+  font-size: 20px;
+  line-height: 1.4;
+  margin: 8px 0 16px;
 }
 .now-modal-foot {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-top: 18px;
-  padding-top: 14px;
-  border-top: 1px solid var(--line);
+  gap: 16px;
 }
-.now-modal-time {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--ink-faint);
-  flex-shrink: 0;
-  font-variant-numeric: tabular-nums;
-}
-.now-modal-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-left: auto;
-}
-.now-act {
-  border: 1px solid var(--line);
-  background: var(--bg-raised);
-  color: var(--ink-soft);
+/* One primary action: complete it and leave focus. */
+.now-primary {
+  position: relative;
+  overflow: visible;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  width: 100%;
+  border: none;
+  background: var(--clay);
+  color: #fff;
   cursor: pointer;
   font-family: var(--font-mono);
-  font-size: 12px;
-  padding: 6px 10px;
-  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 13px 18px;
+  border-radius: 11px;
   line-height: 1;
-  transition: background 0.12s, color 0.12s, border-color 0.12s,
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--clay) 30%, transparent);
+  transition: background 0.14s, transform var(--dur-press) var(--ease-out),
+    box-shadow 0.14s;
+}
+.now-primary:hover {
+  background: var(--clay-deep);
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--clay) 35%, transparent);
+}
+.now-primary:active {
+  transform: scale(0.985);
+}
+.now-primary-check {
+  font-size: 13px;
+}
+.now-primary-burst {
+  animation: check-pop 0.42s cubic-bezier(0.2, 0.85, 0.25, 1);
+}
+/* Secondary actions: quiet icon buttons, demoted under the primary. */
+.now-modal-utils {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.now-util {
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--ink-faint);
+  font-size: 14px;
+  line-height: 1;
+  padding: 7px 9px;
+  border-radius: 8px;
+  transition: color 0.12s, background 0.12s,
     transform var(--dur-press) var(--ease-out);
 }
-.now-act:hover {
-  background: var(--bg-sunk);
+.now-util:hover {
   color: var(--ink);
+  background: var(--bg-sunk);
 }
-.now-act:active {
-  transform: scale(0.96);
+.now-util:active {
+  transform: scale(0.94);
 }
-.now-act-on {
+.now-util-on {
   color: var(--clay);
-  border-color: var(--clay);
 }
-.now-act-clear:hover {
-  color: var(--clay);
-  border-color: var(--clay);
-}
-.now-act-danger:hover {
+.now-util-danger:hover {
   color: var(--clay-deep);
-  border-color: var(--clay-deep);
 }
 .now-modal-confirm {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  margin-left: auto;
 }
 
 /* ---------- To-do rows: [check] tags + text … [actions] [time] ---------- */
@@ -1220,11 +1270,6 @@ button.mention:hover {
     opacity: 0;
     transform: rotate(var(--a)) translateX(var(--d)) scale(1);
   }
-}
-/* The big "Mark done" button in the focus modal anchors a larger burst. */
-.now-act-done {
-  position: relative;
-  overflow: visible;
 }
 
 /* ---------- Review / completion view: tasks grouped by day ---------- */
@@ -2539,7 +2584,8 @@ kbd {
   /* No celebratory motion: drop the breathing glyph and the completion burst.
      The fill, strikethrough, and "Done ✓" toast still convey the change. */
   .now-glyph-live,
-  .check-burst::before {
+  .check-burst::before,
+  .now-primary-burst {
     animation: none;
   }
   .burst {
@@ -2559,7 +2605,8 @@ kbd {
   .send-btn:active,
   .suggest li:active,
   .modal-close:active,
-  .now-act:active,
+  .now-primary:active,
+  .now-util:active,
   .card:active,
   .signin-btn:active:not(:disabled) {
     transform: none;
