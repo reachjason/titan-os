@@ -164,7 +164,9 @@ function Workspace() {
   };
   const toggleDoneEntry = (id: string) => {
     const tags = prefs.taskTags;
+    const wasDone = !!entries.find((e) => e.id === id)?.done;
     toggleDone(id, tags);
+    if (!wasDone) flash("Done ✓");
     pushUndo({ name: "task", undo: () => toggleDone(id, tags), redo: () => toggleDone(id, tags) });
   };
   const togglePinEntry = (id: string) => {
@@ -727,13 +729,12 @@ function Workspace() {
           </div>
         )}
 
-        {nowEntry && (
-          <NowNotch
-            entry={nowEntry}
-            onOpen={() => setNowOpen(true)}
-            onClear={() => setFocusEntry(nowEntry.id)}
-          />
-        )}
+        <NowNotch
+          entry={nowEntry}
+          onOpen={() => setNowOpen(true)}
+          onClear={() => nowEntry && setFocusEntry(nowEntry.id)}
+          onCompose={() => barRef.current?.focus()}
+        />
 
         {view === "board" ? (
           <main className={feedAreaClass} onScroll={handleFeedScroll}>

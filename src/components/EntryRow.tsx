@@ -51,7 +51,26 @@ export function EntryRow({
   const [editing, setEditing] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [draft, setDraft] = useState(entry.raw);
+  const [burst, setBurst] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const burstTimer = useRef<number | null>(null);
+
+  const done = !!entry.done;
+
+  // Fire a one-shot celebration burst only when crossing into "done".
+  const handleToggleDone = () => {
+    if (!done) {
+      if (burstTimer.current) window.clearTimeout(burstTimer.current);
+      setBurst(false);
+      requestAnimationFrame(() => setBurst(true));
+      burstTimer.current = window.setTimeout(() => setBurst(false), 720);
+    }
+    onToggleDone(entry.id);
+  };
+
+  useEffect(() => () => {
+    if (burstTimer.current) window.clearTimeout(burstTimer.current);
+  }, []);
 
   useEffect(() => {
     if (editing && inputRef.current) {
@@ -106,8 +125,6 @@ export function EntryRow({
     );
   }
 
-  const done = !!entry.done;
-
   return (
     <div
       className={`row${done ? " row-done" : ""}${entry.pinned ? " row-pinned" : ""}${
@@ -117,13 +134,27 @@ export function EntryRow({
     >
       {checkable ? (
         <button
-          className={`check${done ? " check-on" : ""}`}
-          onClick={() => onToggleDone(entry.id)}
+          className={`check${done ? " check-on" : ""}${burst ? " check-burst" : ""}${
+            burst && entry.focused ? " check-burst-big" : ""
+          }`}
+          onClick={handleToggleDone}
           title={done ? "Mark not done" : "Mark done"}
           aria-pressed={done}
           aria-label={done ? "Completed" : "Mark done"}
         >
           {done && <span className="check-tick">✓</span>}
+          {burst && (
+            <span className="burst" aria-hidden="true">
+              <span className="burst-ring" />
+              {[0, 1, 2, 3, 4, 5].map((i) => (
+                <span
+                  key={i}
+                  className="burst-particle"
+                  style={{ ["--a" as string]: `${i * 60}deg` }}
+                />
+              ))}
+            </span>
+          )}
         </button>
       ) : (
         <span className="bullet" aria-hidden="true" />

@@ -50,8 +50,24 @@ export function NowModal({
   const [editing, setEditing] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [draft, setDraft] = useState(entry.raw);
+  const [burst, setBurst] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const burstTimer = useRef<number | null>(null);
   const done = !!entry.done;
+
+  const handleToggleDone = () => {
+    if (!done) {
+      if (burstTimer.current) window.clearTimeout(burstTimer.current);
+      setBurst(false);
+      requestAnimationFrame(() => setBurst(true));
+      burstTimer.current = window.setTimeout(() => setBurst(false), 900);
+    }
+    onToggleDone(entry.id);
+  };
+
+  useEffect(() => () => {
+    if (burstTimer.current) window.clearTimeout(burstTimer.current);
+  }, []);
 
   useEffect(() => {
     if (editing && inputRef.current) {
@@ -164,10 +180,24 @@ export function NowModal({
               <div className="now-modal-actions">
                 {checkable && (
                   <button
-                    className={`now-act${done ? " now-act-on" : ""}`}
-                    onClick={() => onToggleDone(entry.id)}
+                    className={`now-act now-act-done${done ? " now-act-on" : ""}${
+                      burst ? " now-act-burst" : ""
+                    }`}
+                    onClick={handleToggleDone}
                   >
                     {done ? "✓ Done" : "Mark done"}
+                    {burst && (
+                      <span className="burst burst-big" aria-hidden="true">
+                        <span className="burst-ring" />
+                        {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
+                          <span
+                            key={i}
+                            className="burst-particle"
+                            style={{ ["--a" as string]: `${i * 45}deg` }}
+                          />
+                        ))}
+                      </span>
+                    )}
                   </button>
                 )}
                 <button

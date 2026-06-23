@@ -721,23 +721,65 @@ body {
 }
 
 /* ---------- "Right now" notch: single focus task, top of workspace ---------- */
-.now-notch {
+/* ---------- "Right now": the hero focus card above the workspace ---------- */
+.now-card {
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 13px;
   width: 100%;
   max-width: 680px;
-  margin: 0 auto;
-  padding: 8px 22px;
+  margin: 12px auto 6px;
+  padding: 14px 18px;
+  background: color-mix(in srgb, var(--clay) 11%, var(--bg-raised));
+  border: 1px solid color-mix(in srgb, var(--clay) 30%, var(--line));
+  border-radius: 14px;
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--clay) 14%, transparent);
+}
+button.now-card-empty {
+  cursor: pointer;
+  text-align: left;
+  background: color-mix(in srgb, var(--clay) 5%, var(--bg));
+  border: 1px dashed color-mix(in srgb, var(--clay) 32%, var(--line));
+  box-shadow: none;
+  transition: background 0.14s, border-color 0.14s;
+}
+button.now-card-empty:hover {
   background: color-mix(in srgb, var(--clay) 9%, var(--bg));
-  border-bottom: 1px solid var(--line);
-  font-family: var(--font-mono);
-  font-size: 13px;
+  border-color: color-mix(in srgb, var(--clay) 45%, var(--line));
 }
 .now-glyph {
-  color: var(--clay);
   flex-shrink: 0;
+  color: var(--clay);
+  font-size: 18px;
+  line-height: 1;
+}
+.now-glyph-live {
+  animation: now-breathe 3.2s ease-in-out infinite;
+}
+@keyframes now-breathe {
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: scale(0.88);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+}
+.now-card-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  text-align: left;
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
 }
 .now-label {
   color: var(--clay);
@@ -745,35 +787,36 @@ body {
   letter-spacing: 0.08em;
   font-size: 10px;
   font-weight: 600;
-  flex-shrink: 0;
+  font-family: var(--font-mono);
 }
-.now-task {
-  flex: 1;
-  min-width: 0;
-  text-align: left;
-  border: none;
-  background: none;
-  cursor: pointer;
-  padding: 2px 0;
+.now-task-text {
   color: var(--ink);
-  font-family: inherit;
-  font-size: inherit;
-  white-space: nowrap;
+  font-size: 16px;
+  line-height: 1.35;
+  font-weight: 500;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
-.now-task:hover {
+.now-card-body:hover .now-task-text {
   color: var(--clay-deep);
+}
+.now-empty-prompt {
+  color: var(--ink-soft);
+  font-size: 15px;
+  line-height: 1.35;
 }
 .now-clear {
   flex-shrink: 0;
+  align-self: flex-start;
   border: none;
   background: none;
   cursor: pointer;
   color: var(--ink-faint);
-  font-size: 12px;
-  padding: 3px 5px;
-  border-radius: 5px;
+  font-size: 13px;
+  padding: 4px 6px;
+  border-radius: 6px;
   line-height: 1;
 }
 .now-clear:hover {
@@ -1087,9 +1130,16 @@ button.mention:hover {
   user-select: none; /* keep copied text clean */
 }
 
-/* Completed: fade + strike, stays in place */
+/* Completed: fade + strike, stays in place. Transitions so it eases in
+   rather than snapping when a task is marked done. */
+.row {
+  transition: opacity 0.32s ease;
+}
 .row-done {
   opacity: 0.55;
+}
+.row-body {
+  transition: color 0.32s ease;
 }
 .row-done .row-body {
   text-decoration: line-through;
@@ -1097,6 +1147,99 @@ button.mention:hover {
 }
 .row-done .chip {
   opacity: 0.7;
+}
+
+/* ---------- Completion burst: a one-shot hurrah on marking done ---------- */
+/* The checkbox springs as it fills... */
+.check-burst::before {
+  animation: check-pop 0.42s cubic-bezier(0.2, 0.85, 0.25, 1);
+}
+@keyframes check-pop {
+  0% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(1.18);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+/* ...and a ring + particles radiate out from its centre. */
+.burst {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+.burst-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
+  border: 2px solid var(--clay);
+  border-radius: 50%;
+  opacity: 0;
+  animation: burst-ring 0.6s ease-out forwards;
+}
+.check-burst-big .burst-ring,
+.burst-big .burst-ring {
+  width: 24px;
+  height: 24px;
+  margin: -12px 0 0 -12px;
+}
+@keyframes burst-ring {
+  0% {
+    opacity: 0.9;
+    transform: scale(0.3);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2.1);
+  }
+}
+.burst-particle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  margin: -2px 0 0 -2px;
+  border-radius: 50%;
+  background: var(--clay);
+  opacity: 0;
+  /* --a is the launch angle (set per-particle inline); --d the distance. */
+  --d: 15px;
+  transform: rotate(var(--a)) translateX(0);
+  animation: burst-particle 0.62s cubic-bezier(0.15, 0.7, 0.3, 1) forwards;
+}
+.burst-big .burst-particle {
+  width: 5px;
+  height: 5px;
+  margin: -2.5px 0 0 -2.5px;
+  --d: 26px;
+}
+@keyframes burst-particle {
+  0% {
+    opacity: 0;
+    transform: rotate(var(--a)) translateX(2px) scale(0.6);
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(var(--a)) translateX(var(--d)) scale(1);
+  }
+}
+/* The big "Mark done" button in the focus modal anchors a larger burst. */
+.now-act-done {
+  position: relative;
+  overflow: visible;
 }
 
 .row-editing {
@@ -2313,6 +2456,15 @@ kbd {
   .row-highlight {
     animation: none;
   }
+  /* No celebratory motion: drop the breathing glyph and the completion burst.
+     The fill, strikethrough, and "Done ✓" toast still convey the change. */
+  .now-glyph-live,
+  .check-burst::before {
+    animation: none;
+  }
+  .burst {
+    display: none;
+  }
   .check:active::before,
   .view-link:active,
   .sort-glyph:active,
@@ -2433,9 +2585,10 @@ kbd {
     padding-left: 14px;
     padding-right: 14px;
   }
-  .now-notch {
-    padding-left: 14px;
-    padding-right: 14px;
+  .now-card {
+    margin-left: 14px;
+    margin-right: 14px;
+    width: auto;
   }
   .now-clear {
     min-width: 34px;
