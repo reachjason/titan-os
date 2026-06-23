@@ -15,6 +15,8 @@ export interface Entry {
   pinned?: boolean;
   /** The single "right now" focus task (at most one per user). */
   focused?: boolean;
+  /** Review "move to today": day this task is scheduled under (else createdAt). */
+  scheduledFor?: number;
   /** Kanban column for task entries. */
   status?: TaskStatus;
   /** Manual sort position (board column + list "manual" sort). */

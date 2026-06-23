@@ -25,6 +25,10 @@ interface Props {
   onTogglePin: (id: string) => void;
   /** Set/clear this entry as the single "right now" focus task. */
   onSetFocus?: (id: string) => void;
+  /** Review only: schedule this task under today (shown when not already today). */
+  onMoveToday?: (id: string) => void;
+  /** Review only: clear the schedule, back to its logged day. */
+  onUnschedule?: (id: string) => void;
 }
 
 /** Does the body contain this tag inline (as "/tag")? */
@@ -47,6 +51,8 @@ export function EntryRow({
   onToggleDone,
   onTogglePin,
   onSetFocus,
+  onMoveToday,
+  onUnschedule,
 }: Props) {
   const [editing, setEditing] = useState(false);
   const [confirming, setConfirming] = useState(false);
@@ -210,6 +216,24 @@ export function EntryRow({
         ) : (
           <>
             <div className="row-actions">
+              {onMoveToday && (
+                <button
+                  className="icon-btn"
+                  title="Move to today"
+                  onClick={() => onMoveToday(entry.id)}
+                >
+                  ▲
+                </button>
+              )}
+              {onUnschedule && (
+                <button
+                  className="icon-btn icon-scheduled"
+                  title="Scheduled for today — move back to its logged day"
+                  onClick={() => onUnschedule(entry.id)}
+                >
+                  ▲
+                </button>
+              )}
               {onSetFocus && (
                 <button
                   className={`icon-btn${entry.focused ? " icon-focused" : ""}`}

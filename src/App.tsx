@@ -74,6 +74,7 @@ function Workspace() {
     toggleDone,
     togglePin,
     setFocus: setFocusTask,
+    setSchedule,
     moveCard,
     setOrder,
     importEntries,
@@ -91,6 +92,10 @@ function Workspace() {
   }));
   const [sort, setSort] = useState<SortMode>(() => loadView()?.sort ?? "asc");
   const [view, setView] = useState<ViewMode>(() => loadView()?.view ?? "list");
+  // Review view: bump the nonce to expand/collapse every day group at once.
+  const [reviewBulk, setReviewBulk] = useState({ nonce: 0, expanded: true });
+  const bulkReview = (expanded: boolean) =>
+    setReviewBulk((b) => ({ nonce: b.nonce + 1, expanded }));
   // Pinned tray starts minimized (just a count); expand via click or Shift+P.
   const [pinnedCollapsed, setPinnedCollapsed] = useState<boolean>(
     () => loadView()?.pinnedCollapsed ?? true
@@ -253,6 +258,19 @@ function Workspace() {
     flash(wasFocused ? "Cleared right now" : "Set as right now");
   };
 
+  const setScheduleEntry = (id: string, scheduledFor: number | null) => {
+    const prev = entries.find((e) => e.id === id)?.scheduledFor ?? null;
+    setSchedule(id, scheduledFor);
+    flash(scheduledFor === null ? "Moved back to its logged day" : "Moved to today");
+    pushUndo({
+      name: "schedule",
+      undo: () => setSchedule(id, prev),
+      redo: () => setSchedule(id, scheduledFor),
+    });
+  };
+  const moveTodayEntry = (id: string) => setScheduleEntry(id, Date.now());
+  const unscheduleEntry = (id: string) => setScheduleEntry(id, null);
+
   const filtered = useMemo(() => {
     // Tag + @mention filters, plus an optional free-text query (same matcher as
     // the Spotlight palette) so "see all matches" lands on a persistent view.
@@ -410,6 +428,13 @@ function Workspace() {
         e.preventDefault();
         setView("review");
         setFilterOpen(false);
+        return;
+      }
+
+      // Review view: e / c expand / collapse every day group.
+      if (view === "review" && (k === "e" || k === "c")) {
+        e.preventDefault();
+        bulkReview(k === "e");
         return;
       }
 
@@ -593,6 +618,19 @@ function Workspace() {
             </div>
           )}
 
+          {view === "review" && (
+            <div className="sort-group" role="group" aria-label="Expand or collapse all days">
+              <button
+                className="sort-glyph"
+                onClick={() => bulkReview(!reviewBulk.expanded)}
+                title={reviewBulk.expanded ? "Collapse all days (c)" : "Expand all days (e)"}
+                aria-label={reviewBulk.expanded ? "Collapse all days" : "Expand all days"}
+              >
+                {reviewBulk.expanded ? "▾" : "▸"}
+              </button>
+            </div>
+          )}
+
           <div className="filter-wrap">
             <button
               className={`filter-trigger${filtering ? " filter-on" : ""}`}
@@ -772,11 +810,15 @@ function Workspace() {
               highlightedEntryId={highlightedEntryId}
               onTagClick={toggleTag}
               onMentionClick={toggleMention}
+              bulkNonce={reviewBulk.nonce}
+              bulkExpanded={reviewBulk.expanded}
               onEdit={editEntry}
               onDelete={deleteEntry}
               onToggleDone={toggleDoneEntry}
               onTogglePin={togglePinEntry}
               onSetFocus={setFocusEntry}
+              onMoveToday={moveTodayEntry}
+              onUnschedule={unscheduleEntry}
             />
           </main>
         ) : (

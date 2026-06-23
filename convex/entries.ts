@@ -244,6 +244,21 @@ export const setFocus = mutation({
   },
 });
 
+/**
+ * Review "move to today" (and back): set or clear the schedule day. Passing a
+ * timestamp groups the task under that day in the review; passing null clears
+ * it so it falls back to createdAt. createdAt is never touched.
+ */
+export const setSchedule = mutation({
+  args: { id: v.id("entries"), scheduledFor: v.union(v.number(), v.null()) },
+  handler: async (ctx, { id, scheduledFor }) => {
+    const userId = await requireUser(ctx);
+    await accessibleEntry(ctx, userId, id);
+    // Patching a field to `undefined` removes it from the document.
+    await ctx.db.patch(id, { scheduledFor: scheduledFor ?? undefined });
+  },
+});
+
 /** Board drag: set column + manual position, syncing done/tag. */
 export const moveCard = mutation({
   args: {

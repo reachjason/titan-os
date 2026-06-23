@@ -1240,31 +1240,10 @@ button.mention:hover {
   text-align: center;
   padding: 60px 20px;
 }
-.review-controls {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  justify-content: flex-end;
-  padding: 0 8px 6px;
-  font-family: var(--font-mono);
-  font-size: 11px;
-}
-.review-ctl {
-  border: none;
-  background: none;
-  cursor: pointer;
-  color: var(--ink-faint);
-  font: inherit;
-  padding: 2px 3px;
-  border-radius: 5px;
-  transition: color 0.12s;
-}
-.review-ctl:hover {
+/* A task pulled to today keeps its ▲ visible (in clay) as a "scheduled" mark. */
+.row-actions .icon-scheduled {
   color: var(--clay);
-}
-.review-ctl-sep {
-  color: var(--ink-faint);
-  opacity: 0.5;
+  opacity: 1;
 }
 .review-day + .review-day {
   margin-top: 16px;

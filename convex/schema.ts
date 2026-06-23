@@ -25,6 +25,9 @@ export default defineSchema({
     /** The single "right now" focus task. At most one true per user.
      *  Optional so pre-existing rows stay valid. */
     focused: v.optional(v.boolean()),
+    /** Review "move to today": when set, the review view groups this task by
+     *  this day instead of createdAt. Non-destructive — createdAt is kept. */
+    scheduledFor: v.optional(v.number()),
     /** Kanban column. */
     status: v.union(v.literal("todo"), v.literal("doing"), v.literal("done")),
     /** Manual sort position (board column + list "manual" sort). */

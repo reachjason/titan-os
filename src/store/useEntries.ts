@@ -21,6 +21,7 @@ function toEntry(doc: ListItem): Entry {
     done: doc.done,
     pinned: doc.pinned,
     focused: doc.focused,
+    scheduledFor: doc.scheduledFor,
     status: doc.status,
     order: doc.order,
     mentions: doc.mentions,
@@ -44,6 +45,7 @@ export function useEntries() {
   const toggleDoneM = useMutation(api.entries.toggleDone);
   const togglePinM = useMutation(api.entries.togglePin);
   const setFocusM = useMutation(api.entries.setFocus);
+  const setScheduleM = useMutation(api.entries.setSchedule);
   const moveCardM = useMutation(api.entries.moveCard);
   const setOrderM = useMutation(api.entries.setOrder);
 
@@ -88,6 +90,11 @@ export function useEntries() {
     (id: string) => void setFocusM({ id: id as Id<"entries"> }),
     [setFocusM]
   );
+  const setSchedule = useCallback(
+    (id: string, scheduledFor: number | null) =>
+      void setScheduleM({ id: id as Id<"entries">, scheduledFor }),
+    [setScheduleM]
+  );
   const moveCard = useCallback(
     (id: string, status: TaskStatus, order: number, taskTags: string[]) =>
       void moveCardM({ id: id as Id<"entries">, status, order, taskTags }),
@@ -118,6 +125,7 @@ export function useEntries() {
     toggleDone,
     togglePin,
     setFocus,
+    setSchedule,
     moveCard,
     setOrder,
     importEntries,

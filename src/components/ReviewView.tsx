@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Entry } from "../types";
 import { EntryRow } from "./EntryRow";
 import { isTask } from "../store/usePrefs";
@@ -10,6 +10,9 @@ interface Props {
   activeTags: string[];
   activeMentions: string[];
   highlightedEntryId?: string | null;
+  /** Bumped by the header control to expand/collapse every day at once. */
+  bulkNonce: number;
+  bulkExpanded: boolean;
   onTagClick: (tag: string) => void;
   onMentionClick: (name: string) => void;
   onEdit: (id: string, raw: string) => void;
@@ -17,6 +20,9 @@ interface Props {
   onToggleDone: (id: string) => void;
   onTogglePin: (id: string) => void;
   onSetFocus: (id: string) => void;
+  /** Schedule a task under today / clear its schedule. */
+  onMoveToday: (id: string) => void;
+  onUnschedule: (id: string) => void;
 }
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
@@ -27,6 +33,12 @@ interface DayGroup {
   ts: number;
   open: Entry[];
   done: Entry[];
+}
+
+/** The day this task sits under in the review: its schedule day if "moved to
+ *  today", otherwise when it was logged. */
+function effectiveAt(e: Entry): number {
+  return e.scheduledFor ?? e.createdAt;
 }
 
 /** Drop leading status tags (e.g. "/do ", "/done ") from the displayed text —
@@ -44,11 +56,12 @@ function cleanBody(body: string, statusTags: Set<string>): string {
 
 /**
  * Completion / weekly-review view. Shows only task-tagged (or completed)
- * entries, grouped by the day they were logged — most recent first. Within
- * each day, open tasks sit above completed ones. The status tag is stripped
- * from the text so the task itself is the only thing on the row, and rows align
- * to one column. Days older than a week start collapsed so "this week" stays
- * front and centre. Press e / c to expand or collapse every day.
+ * entries, grouped by their day — most recent first. Within each day, open
+ * tasks sit above completed ones. The status tag is stripped from the text so
+ * the task itself is the only thing on the row, and rows align to one column.
+ * Days older than a week start collapsed so "this week" stays front and centre.
+ * Each row can be pulled to today (non-destructively); the header symbol and
+ * the e / c keys expand or collapse every day.
  */
 export function ReviewView({
   entries,
@@ -56,6 +69,8 @@ export function ReviewView({
   activeTags,
   activeMentions,
   highlightedEntryId,
+  bulkNonce,
+  bulkExpanded,
   onTagClick,
   onMentionClick,
   onEdit,
@@ -63,10 +78,11 @@ export function ReviewView({
   onToggleDone,
   onTogglePin,
   onSetFocus,
+  onMoveToday,
+  onUnschedule,
 }: Props) {
-  // Day key → explicit expand/collapse override (set when the user clicks a
-  // day header or hits the expand/collapse-all keys). Days without an override
-  // fall back to the this-week default.
+  // Day key → explicit expand/collapse override (set by clicking a day header
+  // or a bulk command). Days without one fall back to the this-week default.
   const [overrides, setOverrides] = useState<Record<string, boolean>>({});
 
   const statusTags = useMemo(
@@ -78,53 +94,38 @@ export function ReviewView({
     const tasks = entries.filter((e) => isTask(e.tags, taskTags) || e.done);
     const byDay = new Map<string, DayGroup>();
     for (const e of tasks) {
-      const key = dayKey(e.createdAt);
+      const at = effectiveAt(e);
+      const key = dayKey(at);
       let g = byDay.get(key);
       if (!g) {
-        g = { key, label: dividerLabel(e.createdAt), ts: e.createdAt, open: [], done: [] };
+        g = { key, label: dividerLabel(at), ts: at, open: [], done: [] };
         byDay.set(key, g);
       }
-      g.ts = Math.max(g.ts, e.createdAt);
+      g.ts = Math.max(g.ts, at);
       (e.done ? g.done : g.open).push(e);
     }
-    const byCreatedDesc = (a: Entry, b: Entry) => b.createdAt - a.createdAt;
+    const byAtDesc = (a: Entry, b: Entry) => effectiveAt(b) - effectiveAt(a);
     const list = Array.from(byDay.values());
     for (const g of list) {
-      g.open.sort(byCreatedDesc);
-      g.done.sort(byCreatedDesc);
+      g.open.sort(byAtDesc);
+      g.done.sort(byAtDesc);
     }
     return list.sort((a, b) => b.ts - a.ts);
   }, [entries, taskTags]);
 
-  const setAll = useCallback(
-    (expanded: boolean) => {
-      setOverrides(() => {
-        const next: Record<string, boolean> = {};
-        for (const g of groups) next[g.key] = expanded;
-        return next;
-      });
-    },
-    [groups]
-  );
-
-  // e → expand all, c → collapse all (when not typing in a field).
+  // Apply bulk expand/collapse. Driven by `bulkNonce` so it only fires on an
+  // explicit command, not when the groups change. A ref keeps the latest
+  // groups without retriggering the effect.
+  const groupsRef = useRef(groups);
+  groupsRef.current = groups;
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
-      const el = document.activeElement as HTMLElement | null;
-      if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable))
-        return;
-      if (e.key === "e") {
-        e.preventDefault();
-        setAll(true);
-      } else if (e.key === "c") {
-        e.preventDefault();
-        setAll(false);
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [setAll]);
+    if (!bulkNonce) return;
+    setOverrides(() => {
+      const next: Record<string, boolean> = {};
+      for (const g of groupsRef.current) next[g.key] = bulkExpanded;
+      return next;
+    });
+  }, [bulkNonce, bulkExpanded]);
 
   if (groups.length === 0) {
     return (
@@ -136,19 +137,11 @@ export function ReviewView({
     );
   }
 
+  const today = dayKey(Date.now());
   const weekAgo = Date.now() - WEEK_MS;
 
   return (
     <div className="review">
-      <div className="review-controls">
-        <button className="review-ctl" onClick={() => setAll(true)} title="Expand all days (e)">
-          expand all
-        </button>
-        <span className="review-ctl-sep">·</span>
-        <button className="review-ctl" onClick={() => setAll(false)} title="Collapse all days (c)">
-          collapse all
-        </button>
-      </div>
       {groups.map((g) => {
         const expanded = overrides[g.key] ?? g.ts >= weekAgo;
         const rows = [...g.open, ...g.done];
@@ -178,6 +171,7 @@ export function ReviewView({
                 {rows.map((entry) => {
                   const text = cleanBody(entry.body, statusTags);
                   const display = text === entry.body ? entry : { ...entry, body: text };
+                  const isToday = dayKey(effectiveAt(entry)) === today;
                   return (
                     <EntryRow
                       key={entry.id}
@@ -195,6 +189,8 @@ export function ReviewView({
                       onToggleDone={onToggleDone}
                       onTogglePin={onTogglePin}
                       onSetFocus={onSetFocus}
+                      onMoveToday={!isToday ? onMoveToday : undefined}
+                      onUnschedule={isToday && entry.scheduledFor != null ? onUnschedule : undefined}
                     />
                   );
                 })}
