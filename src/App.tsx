@@ -176,8 +176,25 @@ function Workspace() {
     pushUndo({ name: "task", undo: () => toggleDone(id, tags), redo: () => toggleDone(id, tags) });
   };
   const togglePinEntry = (id: string) => {
+    const e = entries.find((x) => x.id === id);
+    const willPin = !e?.pinned;
+    // Pinning a task makes it today's focus in the review; unpinning returns it
+    // to its logged day. Plain notes just pin (they don't show in the review).
+    const isTaskEntry = !!e && (isTask(e.tags, prefs.taskTags) || !!e.done);
+    const prevSchedule = e?.scheduledFor ?? null;
     togglePin(id);
-    pushUndo({ name: "pin", undo: () => togglePin(id), redo: () => togglePin(id) });
+    if (isTaskEntry) setSchedule(id, willPin ? Date.now() : null);
+    pushUndo({
+      name: "pin",
+      undo: () => {
+        togglePin(id);
+        if (isTaskEntry) setSchedule(id, prevSchedule);
+      },
+      redo: () => {
+        togglePin(id);
+        if (isTaskEntry) setSchedule(id, willPin ? Date.now() : null);
+      },
+    });
   };
   const moveCardEntry = (id: string, status: TaskStatus, order: number) => {
     const prev = entries.find((e) => e.id === id);
