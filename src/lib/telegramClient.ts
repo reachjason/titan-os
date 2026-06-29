@@ -51,7 +51,14 @@ export interface QrLoginHandlers {
  * responsible for immediately encrypting it (createVault) and then discarding
  * the plaintext. The client is disconnected before returning.
  */
-export async function qrLogin(handlers: QrLoginHandlers): Promise<string> {
+export interface QrLoginResult {
+  /** The session string (full account access) — encrypt immediately, never log. */
+  session: string;
+  /** The signed-in account's @username (or first name if no username), for display. */
+  handle: string;
+}
+
+export async function qrLogin(handlers: QrLoginHandlers): Promise<QrLoginResult> {
   const { TelegramClient, StringSession, LogLevel } = await loadGramjs();
   const session = new StringSession("");
   const client = new TelegramClient(session, API_ID, API_HASH, { connectionRetries: 3 });
@@ -73,7 +80,15 @@ export async function qrLogin(handlers: QrLoginHandlers): Promise<string> {
         },
       }
     );
-    return session.save();
+    // Pull the real handle from the now-authenticated account — no need to ask.
+    let handle = "";
+    try {
+      const me = (await client.getMe()) as { username?: string; firstName?: string };
+      handle = me?.username ? `@${me.username}` : me?.firstName || "";
+    } catch {
+      /* non-fatal — we just won't have a handle label */
+    }
+    return { session: session.save(), handle };
   } finally {
     await client.disconnect();
   }

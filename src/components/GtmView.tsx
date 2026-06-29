@@ -38,7 +38,6 @@ export function GtmView({ onToast }: { onToast: (msg: string) => void }) {
   const [sentTotal, setSentTotal] = useState(0);
   const [settingsOpen, setSettingsOpen] = useState(false);
   // ---- connect / unlock flow ----
-  const [handleDraft, setHandleDraft] = useState("");
   const [pinDraft, setPinDraft] = useState("");
   // Connect sub-step: collect PIN → show QR (live) → optional 2FA prompt.
   const [connectStep, setConnectStep] = useState<"pin" | "qr">("pin");
@@ -196,7 +195,7 @@ export function GtmView({ onToast }: { onToast: (msg: string) => void }) {
       setQrDataUrl(null);
       setLinkError(null);
       void gtm
-        .linkTelegram(pin, handleDraft, {
+        .linkTelegram(pin, {
           onUrl: async (url) => {
             try {
               setQrDataUrl(await QRCode.toDataURL(url, { margin: 1, width: 320 }));
@@ -243,18 +242,9 @@ export function GtmView({ onToast }: { onToast: (msg: string) => void }) {
                   inputMode="numeric"
                   value={pinDraft}
                   onChange={(e) => setPinDraft(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && pinReady && startLink(pinDraft)}
                   placeholder="••••"
-                />
-              </div>
-              <div className="gtm-field">
-                <label className="gtm-field-label">
-                  your handle <span className="gtm-faint">(optional label)</span>
-                </label>
-                <input
-                  className="gtm-input"
-                  value={handleDraft}
-                  onChange={(e) => setHandleDraft(e.target.value)}
-                  placeholder="@jason"
+                  autoFocus
                 />
               </div>
               <div className="gtm-connect-actions">

@@ -148,34 +148,30 @@ export function useGtm() {
    * Link Telegram via QR + set the broadcast PIN, in one flow:
    *  1. validate the PIN,
    *  2. run the real QR login (renders the QR and prompts for 2FA via the given
-   *     handlers) to obtain a session string,
+   *     handlers) to obtain a session string AND the account's real @handle,
    *  3. encrypt that session into the vault under the PIN, and
-   *  4. record the handle and drop to the locked screen.
+   *  4. record the fetched handle and drop to the locked screen.
    * Returns an error string on failure (too-short PIN, login failed), or null
    * on success. The plaintext session never leaves this function.
    */
   const linkTelegram = useCallback(
-    async (
-      pin: string,
-      handle: string,
-      handlers: QrLoginHandlers
-    ): Promise<string | null> => {
+    async (pin: string, handlers: QrLoginHandlers): Promise<string | null> => {
       if (pin.trim().length < 4) return "PIN must be at least 4 characters";
       // Start fresh: a stale vault would block createVault.
       await wipe();
-      let session: string;
+      let result: { session: string; handle: string };
       try {
-        session = await qrLogin(handlers);
+        result = await qrLogin(handlers);
       } catch (e) {
         return (e as Error)?.message || "Telegram login failed";
       }
       try {
-        await createVault(pin, session);
+        await createVault(pin, result.session);
       } catch {
         return "Couldn't secure the session — try again";
       }
-      const u = handle.trim();
-      setState((s) => ({ ...s, userId: u || s.userId, pinSet: true, phase: "locked" }));
+      // Use the handle Telegram reports for this account — no need to ask.
+      setState((s) => ({ ...s, userId: result.handle || s.userId, pinSet: true, phase: "locked" }));
       return null;
     },
     []
