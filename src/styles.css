@@ -2744,3 +2744,1082 @@ kbd {
     min-height: 24px;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   GTM · Go-to-Market broadcast view
+   A full-width section (Telegram group broadcast tool). Built on the app's
+   theme tokens so it follows light/dark. Category chip colors are injected
+   inline by GtmView (see lib/gtmCategories.ts).
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Break the GTM view out of the 820px centered column to full width. */
+.app-gtm {
+  max-width: none;
+}
+
+.gtm-area {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+}
+
+.gtm-root {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+@keyframes gtm-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes gtm-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes gtm-sheet {
+  from {
+    transform: translateX(20px);
+    opacity: 0.4;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.gtm-spin {
+  display: inline-block;
+  animation: gtm-spin 0.8s linear infinite;
+}
+
+/* ---- shared atoms ---- */
+.gtm-mono {
+  font-family: var(--font-mono);
+}
+.gtm-faint {
+  color: var(--ink-faint);
+}
+.gtm-sm {
+  font-size: 11.5px;
+}
+.gtm-italic {
+  font-style: italic;
+}
+.gtm-handle {
+  color: var(--clay);
+  font-weight: 600;
+}
+.gtm-mt8 {
+  margin-top: 8px;
+}
+.gtm-mt12 {
+  margin-top: 12px;
+}
+.gtm-mt16 {
+  margin-top: 16px;
+}
+.gtm-mb {
+  margin-bottom: 11px;
+}
+.gtm-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.gtm-eyebrow {
+  font-size: 10px;
+  letter-spacing: 0.6px;
+  color: var(--ink-faint);
+}
+
+.gtm-display {
+  font-family: var(--font-display);
+  font-weight: 500;
+  letter-spacing: -0.2px;
+  font-size: 31px;
+}
+.gtm-display-sm {
+  font-size: 23px;
+}
+.gtm-display-xs {
+  font-size: 20px;
+}
+
+.gtm-lede {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ink-soft);
+  max-width: 440px;
+}
+.gtm-lede-center {
+  margin: 0 auto;
+  text-align: center;
+}
+
+.gtm-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+.gtm-dot-amber {
+  background: #c9923f;
+}
+.gtm-dot-green {
+  background: #7fae84;
+  width: 7px;
+  height: 7px;
+}
+
+/* ---- buttons ---- */
+.gtm-btn {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: opacity 0.12s, transform var(--dur-press) var(--ease-out),
+    background 0.12s;
+  white-space: nowrap;
+}
+.gtm-btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.gtm-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+  pointer-events: none;
+}
+.gtm-btn-primary {
+  background: var(--clay);
+  color: #fff;
+  border-color: var(--clay);
+}
+.gtm-btn-primary:hover:not(:disabled) {
+  background: var(--clay-deep);
+}
+.gtm-btn-ghost {
+  background: transparent;
+  color: var(--ink-soft);
+  border-color: var(--line);
+}
+.gtm-btn-ghost:hover:not(:disabled) {
+  background: var(--bg-sunk);
+}
+.gtm-btn-soft {
+  background: var(--bg-sunk);
+  color: var(--ink);
+  border-color: var(--line);
+}
+.gtm-btn-accent {
+  color: var(--clay);
+  border-color: var(--clay);
+}
+.gtm-btn-danger {
+  color: var(--clay);
+}
+.gtm-btn-sm {
+  font-size: 11px;
+  padding: 5px 11px;
+}
+.gtm-btn-lg {
+  font-size: 13.5px;
+  letter-spacing: 0.3px;
+  padding: 12px 26px;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+}
+.gtm-btn-block {
+  width: 100%;
+  display: block;
+}
+
+.gtm-textbtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-soft);
+  padding: 0;
+  transition: color 0.12s;
+}
+.gtm-textbtn:hover {
+  color: var(--ink);
+}
+
+/* ---- inputs ---- */
+.gtm-input {
+  width: 100%;
+  background: var(--bg-sunk);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 11px 12px;
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.12s;
+}
+.gtm-input:focus {
+  border-color: var(--clay);
+}
+.gtm-input-sm {
+  padding: 8px 10px;
+  font-size: 12px;
+}
+.gtm-input::placeholder {
+  color: var(--ink-faint);
+}
+
+.gtm-field {
+  margin-bottom: 15px;
+}
+.gtm-field-row {
+  display: flex;
+  gap: 13px;
+  margin-bottom: 15px;
+}
+.gtm-field-row .gtm-field {
+  flex: 1;
+  margin-bottom: 0;
+}
+.gtm-field-label {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-soft);
+  margin-bottom: 6px;
+}
+
+.gtm-link {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--clay);
+  text-decoration: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--clay) 35%, transparent);
+  padding-bottom: 1px;
+}
+
+/* ---- category chips ---- */
+.gtm-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 5px;
+}
+.gtm-chip-md {
+  font-size: 11.5px;
+  padding: 4px 8px;
+}
+.gtm-chip-lg {
+  font-size: 12px;
+  padding: 3px 9px;
+}
+.gtm-chip-x {
+  cursor: pointer;
+  opacity: 0.7;
+}
+.gtm-chip-x:hover {
+  opacity: 1;
+}
+.gtm-chip-add {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--ink-faint);
+  cursor: pointer;
+  border: 1px dashed var(--dot);
+  background: none;
+  padding: 2px 8px;
+  border-radius: 5px;
+}
+.gtm-chip-add:hover {
+  color: var(--ink-soft);
+  border-color: var(--ink-faint);
+}
+.gtm-badge-new {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: #7fae84;
+  background: color-mix(in srgb, #7fae84 14%, var(--bg));
+  border: 1px solid color-mix(in srgb, #7fae84 30%, transparent);
+  padding: 1px 6px;
+  border-radius: 5px;
+}
+
+/* "pick" chips in sheet/popover — outlined when off, filled when on */
+.gtm-pick {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  padding: 4px 9px;
+  border-radius: 6px;
+  border: 1px solid var(--dot);
+  color: var(--ink-soft);
+  background: transparent;
+  cursor: pointer;
+}
+.gtm-pick:hover {
+  border-color: var(--ink-faint);
+}
+.gtm-pick-on {
+  border-color: transparent;
+}
+.gtm-pick-some {
+  opacity: 0.85;
+}
+
+.gtm-chip-pick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.gtm-inline-add {
+  display: flex;
+  gap: 7px;
+}
+.gtm-inline-add .gtm-input {
+  flex: 1;
+}
+
+/* ═══════ CONNECT GATE ═══════ */
+.gtm-connect {
+  align-items: center;
+  justify-content: center;
+  padding: 30px;
+  overflow: auto;
+}
+.gtm-connect-card {
+  width: 470px;
+  max-width: 100%;
+}
+.gtm-status-line {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: var(--ink-soft);
+  margin-bottom: 14px;
+}
+.gtm-connect .gtm-display {
+  margin-bottom: 8px;
+}
+.gtm-connect .gtm-lede {
+  margin-bottom: 28px;
+}
+.gtm-connect-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 28px;
+}
+.gtm-hint {
+  font-size: 11.5px;
+  color: var(--ink-faint);
+}
+.gtm-footnote {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 22px;
+  font-size: 12px;
+  color: var(--ink-faint);
+}
+/* QR login panel — the code box stays light in both themes. */
+.gtm-qr-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 26px;
+}
+.gtm-qr {
+  width: 188px;
+  height: 188px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  box-shadow: var(--shadow-card);
+}
+.gtm-qr-glyph {
+  font-size: 76px;
+  line-height: 1;
+  color: #1c1c1c;
+}
+.gtm-qr-caption {
+  font-size: 10.5px;
+  letter-spacing: 1px;
+  color: #8a8a8a;
+  text-transform: uppercase;
+}
+/* PIN entry — widely spaced, monospaced digits. */
+.gtm-pin-input {
+  font-family: var(--font-mono);
+  letter-spacing: 0.4em;
+  font-size: 16px;
+}
+.gtm-input-error,
+.gtm-input-error:focus {
+  border-color: var(--clay);
+}
+.gtm-pin-err {
+  margin-top: 8px;
+  color: var(--clay);
+}
+
+/* ═══════ CONNECTED BAR + EMPTY ═══════ */
+.gtm-connbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 26px;
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+}
+.gtm-connbar-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  margin-right: auto;
+}
+/* Live unlock indicator — counts down from 30:00, resets on each send. */
+.gtm-ttl-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11.5px;
+  color: #7fae84;
+  background: color-mix(in srgb, #7fae84 12%, var(--bg));
+  border: 1px solid color-mix(in srgb, #7fae84 28%, transparent);
+  border-radius: 7px;
+  padding: 4px 10px;
+  margin-right: 12px;
+}
+.gtm-ttl-lock {
+  font-size: 11px;
+  line-height: 1;
+}
+.gtm-ttl-clock {
+  font-size: 11px;
+  color: color-mix(in srgb, #7fae84 75%, var(--ink));
+  font-variant-numeric: tabular-nums;
+}
+/* "Found N new groups" banner above the list after a sync reveals groups. */
+.gtm-newgroups-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 26px;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  background: color-mix(in srgb, var(--clay) 8%, var(--bg-raised));
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+}
+.gtm-newgroups-spark {
+  color: var(--clay);
+  margin-right: 4px;
+}
+.gtm-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 40px;
+}
+.gtm-empty-icon {
+  width: 62px;
+  height: 62px;
+  border: 1.5px dashed var(--dot);
+  border-radius: 14px;
+  margin-bottom: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-faint);
+  font-family: var(--font-mono);
+  font-size: 23px;
+}
+.gtm-empty .gtm-display-sm {
+  margin-bottom: 8px;
+}
+.gtm-empty .gtm-lede {
+  margin-bottom: 22px;
+}
+.gtm-filter-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 30px;
+}
+.gtm-filter-token {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--clay);
+  background: var(--mark);
+  padding: 2px 8px;
+  border-radius: 5px;
+}
+.gtm-filter-edit {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--clay);
+  cursor: pointer;
+  border: none;
+  background: none;
+  border-left: 1px solid var(--line);
+  padding-left: 9px;
+}
+.gtm-empty-foot {
+  margin-top: 18px;
+}
+
+/* ═══════ MAIN — two-pane + dock ═══════ */
+.gtm-main {
+}
+.gtm-panes {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+/* left rail */
+.gtm-rail {
+  width: 248px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.gtm-rail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 16px 10px;
+}
+.gtm-rail-list {
+  flex: 1;
+  overflow: auto;
+  padding: 0 12px 12px;
+}
+.gtm-rail-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 9px;
+  border-radius: 7px;
+  margin-bottom: 2px;
+}
+.gtm-rail-row:hover {
+  background: var(--bg-sunk);
+}
+.gtm-rail-on {
+  background: var(--bg-sunk);
+}
+.gtm-rail-label {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 13px;
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+  color: var(--ink-soft);
+}
+.gtm-rail-on .gtm-rail-label {
+  color: var(--ink);
+}
+.gtm-rail-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.gtm-rail-broadcast {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--ink-faint);
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0 4px;
+}
+.gtm-rail-broadcast:hover {
+  color: var(--clay);
+}
+.gtm-rail-count {
+  font-size: 11px;
+  min-width: 16px;
+  text-align: right;
+}
+.gtm-rail-foot {
+  border-top: 1px solid var(--line);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.gtm-rail-foot .gtm-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* right list */
+.gtm-list-pane {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.gtm-list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 22px 12px;
+  flex-shrink: 0;
+}
+.gtm-list-title {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+.gtm-list-actions {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+.gtm-bulk-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.gtm-list-rows {
+  flex: 1;
+  overflow: auto;
+  padding: 0 18px 18px;
+}
+.gtm-grow {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 11px;
+  border-radius: 9px;
+  margin-bottom: 6px;
+  border: 1px solid var(--line);
+  background: var(--bg-raised);
+}
+.gtm-grow-on {
+  border-color: var(--clay);
+  background: var(--bg-sunk);
+}
+.gtm-check {
+  width: 17px;
+  height: 17px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  cursor: pointer;
+  border: 1.4px solid var(--dot);
+  color: transparent;
+}
+.gtm-check-on {
+  background: var(--clay);
+  color: #fff;
+  border-color: var(--clay);
+}
+.gtm-check-md {
+  width: 17px;
+  height: 17px;
+  border-radius: 5px;
+}
+.gtm-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  background: var(--bg-sunk);
+  color: var(--ink-soft);
+}
+.gtm-avatar-lg {
+  width: 38px;
+  height: 38px;
+  border-radius: 9px;
+  font-size: 16px;
+}
+.gtm-grow-meta {
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+}
+.gtm-grow-name {
+  font-size: 13.5px;
+  font-weight: 500;
+}
+.gtm-grow-chips {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+.gtm-grow-edit {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--ink-faint);
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0 4px;
+}
+.gtm-grow-edit:hover {
+  color: var(--ink-soft);
+}
+
+/* compose dock */
+.gtm-dock {
+  border-top: 1px solid var(--line);
+  background: var(--bg-raised);
+  padding: 13px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+}
+.gtm-dock-target {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 150px;
+}
+.gtm-dock-input {
+  flex: 1;
+  background: var(--bg-sunk);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 11px 13px;
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  outline: none;
+  transition: border-color 0.12s;
+}
+.gtm-dock-input:focus {
+  border-color: var(--clay);
+}
+.gtm-dock-input::placeholder {
+  color: var(--ink-faint);
+}
+
+/* ═══════ POPOVER (bulk categorize) ═══════ */
+.gtm-popover-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 29;
+}
+.gtm-popover {
+  position: absolute;
+  top: calc(100% + 9px);
+  right: 0;
+  z-index: 30;
+  width: 280px;
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  box-shadow: var(--shadow-strong);
+  padding: 15px 16px;
+  animation: gtm-pop 0.14s ease;
+  text-align: left;
+}
+
+/* ═══════ SIDE SHEET (categorize) ═══════ */
+.gtm-sheet-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: var(--scrim);
+}
+.gtm-sheet-rest {
+  position: absolute;
+  inset: 0;
+}
+.gtm-sheet {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 400px;
+  max-width: 90vw;
+  background: var(--bg-raised);
+  border-left: 1px solid var(--line);
+  box-shadow: var(--shadow-strong);
+  padding: 24px 26px;
+  overflow: auto;
+  animation: gtm-sheet 0.18s ease;
+}
+.gtm-sheet-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.gtm-sheet-id {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.gtm-sheet-name {
+  font-size: 15px;
+  font-weight: 600;
+}
+.gtm-sheet-section {
+  margin: 24px 0 10px;
+}
+.gtm-sheet-current {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 26px;
+}
+
+/* ═══════ MODALS (review / settings) ═══════ */
+.gtm-modal-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: var(--scrim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.gtm-modal {
+  width: 560px;
+  max-width: 100%;
+  max-height: 90vh;
+  overflow: auto;
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--shadow-strong);
+  padding: 24px 26px;
+  animation: gtm-pop 0.16s ease;
+}
+.gtm-modal-sm {
+  width: 440px;
+}
+.gtm-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.gtm-x {
+  color: var(--ink-faint);
+  font-size: 18px;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  line-height: 1;
+}
+.gtm-x:hover {
+  color: var(--ink);
+}
+.gtm-msg-preview {
+  background: var(--bg-sunk);
+  border: 1px solid var(--line);
+  border-left: 2px solid var(--clay);
+  border-radius: 7px;
+  padding: 11px 13px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  margin-bottom: 18px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.gtm-recipients {
+  max-height: 168px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+.gtm-recipient {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.gtm-recipient:last-child {
+  border-bottom: none;
+}
+.gtm-recip-icon {
+  font-size: 13px;
+  width: 14px;
+  text-align: center;
+  color: #7fae84;
+}
+.gtm-recip-warn {
+  color: #c9923f;
+}
+.gtm-recip-name {
+  flex: 1;
+  font-size: 13px;
+}
+.gtm-recip-note {
+  color: #c9923f;
+  font-size: 11px;
+}
+.gtm-review-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+.gtm-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  border-radius: 7px;
+  padding: 8px 11px;
+}
+.gtm-note-ok {
+  color: #7fae84;
+  background: color-mix(in srgb, #7fae84 12%, var(--bg));
+  border: 1px solid color-mix(in srgb, #7fae84 28%, transparent);
+}
+.gtm-note-pending {
+  color: var(--ink-soft);
+  background: var(--bg-sunk);
+  border: 1px dashed var(--line);
+}
+.gtm-note-warn {
+  color: #c9a76a;
+  background: color-mix(in srgb, #c9a76a 12%, var(--bg));
+  border: 1px solid color-mix(in srgb, #c9a76a 26%, transparent);
+}
+.gtm-confirm {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  margin-bottom: 18px;
+  cursor: pointer;
+}
+.gtm-modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+.gtm-progress-wrap {
+  margin-bottom: 6px;
+}
+.gtm-progress-label {
+  display: flex;
+  justify-content: space-between;
+  color: var(--ink-soft);
+  margin-bottom: 7px;
+}
+.gtm-progress-track {
+  height: 6px;
+  background: var(--bg-sunk);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.gtm-progress-bar {
+  height: 100%;
+  background: var(--clay);
+  transition: width 0.15s;
+}
+
+.gtm-settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+  margin-top: 12px;
+}
+.gtm-settings-title {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+/* ═══════ responsive ═══════ */
+@media (max-width: 760px) {
+  .gtm-rail {
+    width: 200px;
+  }
+  .gtm-dock {
+    flex-wrap: wrap;
+  }
+  .gtm-dock-input {
+    order: 3;
+    flex-basis: 100%;
+  }
+}
+@media (max-width: 560px) {
+  .gtm-rail {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gtm-spin,
+  .gtm-popover,
+  .gtm-sheet,
+  .gtm-modal {
+    animation: none;
+  }
+  .gtm-btn:active:not(:disabled) {
+    transform: none;
+  }
+}

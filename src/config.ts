@@ -84,6 +84,15 @@ export const config = {
     confirmOnDelete: true,
     /** Auto-scroll the feed to the newest entry. */
     autoScroll: true,
+    /** GTM (Telegram broadcast) section copy. */
+    gtm: {
+      linkTitle: "Link your Telegram",
+      setPinTitle: "Set a broadcast PIN",
+      unlockTitle: "Enter your PIN",
+      unlockedLabel: "Unlocked",
+      lockNowLabel: "lock now",
+      newGroupsLabel: "new groups",
+    },
   },
 
   /** Keyboard shortcuts (KeyboardEvent.key values; search uses Shift). */
