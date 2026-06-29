@@ -10,6 +10,7 @@
 
 import type * as auth from "../auth.js";
 import type * as entries from "../entries.js";
+import type * as gtmGroups from "../gtmGroups.js";
 import type * as http from "../http.js";
 import type * as lib from "../lib.js";
 import type * as mcp from "../mcp.js";
@@ -26,6 +27,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   entries: typeof entries;
+  gtmGroups: typeof gtmGroups;
   http: typeof http;
   lib: typeof lib;
   mcp: typeof mcp;

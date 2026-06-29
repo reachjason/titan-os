@@ -1,34 +1,52 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import * as lock from "../lib/sessionLock";
+import { createVault, hasVault, wipe, VaultError } from "../lib/sessionVault";
 
 /**
- * GTM (Go-to-Market) mock store. This is a frontend-only feature: it simulates
- * connecting a Telegram account, syncing the groups you're in, categorizing
- * them, and broadcasting a message to every group in a category. No backend —
- * everything lives in localStorage on this device, exactly like the design
- * prototype it was built from.
+ * GTM (Go-to-Market) store — the connect → unlock lifecycle and per-device UI
+ * prefs for the Telegram broadcast feature. Group data lives in Convex (see
+ * useGtmGroups); the Telegram session lives encrypted in IndexedDB (see
+ * sessionVault) and is unlocked into memory via sessionLock.
  *
- * The connect flow models the *real* security design (see the GTM integration
- * plan): you link Telegram by scanning a QR code, then set a broadcast PIN that
- * (in the real build) encrypts the session at rest. Each browser session you
- * enter the PIN once to "unlock"; the unlock lasts 30 minutes, refreshed on
- * every send, and is held in memory only — never persisted. Phase 0 fakes all
- * of this with no real crypto, but keeps the same shape so the UX is real.
+ * Flow: link Telegram by scanning a QR code, set a broadcast PIN that encrypts
+ * the session at rest, then enter that PIN once per browser session to unlock.
+ * The unlock lasts 30 minutes (refreshed on every send) and is held in memory
+ * only — a reload re-locks.
+ *
+ * Until Phase 3 wires real Telegram, the QR step is simulated and a placeholder
+ * session string is what gets encrypted — but the PIN, the AES-GCM vault, and
+ * the in-memory unlock are all real.
  */
 
 /** Connection lifecycle. `loggedOut` → (scan QR + set PIN) → `locked` → (enter PIN) → `unlocked`. */
 export type GtmPhase = "loggedOut" | "locked" | "unlocked";
 
+/**
+ * Placeholder session encrypted by the vault until real QR login (Phase 3)
+ * produces a true MTProto session string. It proves the vault end-to-end.
+ */
+const PLACEHOLDER_SESSION = "titan-gtm-placeholder-session";
+
 export interface GtmGroup {
+  /** Convex document id (the stable handle used by category mutations). */
   id: string;
+  /** Telegram group/channel id. */
+  tgId: string;
   name: string;
   handle: string;
   members: number;
   /** Category slugs this group belongs to. */
   cats: string[];
-  /** Surfaced with a "new" badge right after the sync that introduced it. */
+  /** Surfaced with a "new" badge until dismissed. */
   isNew?: boolean;
 }
 
+/**
+ * Per-device UI state. Group data and category tags now live in Convex (see
+ * useGtmGroups); this store keeps only what is local to the device: the connect
+ * → unlock lifecycle, the broadcast handle, the category rail order, and the
+ * sync filter.
+ */
 export interface GtmState {
   /** Where the user is in the connect → unlock lifecycle. */
   phase: GtmPhase;
@@ -36,9 +54,6 @@ export interface GtmState {
   userId: string;
   /** Whether a broadcast PIN has been set (i.e. the account is linked). */
   pinSet: boolean;
-  synced: boolean;
-  groups: GtmGroup[];
-  syncedAt: number;
   /** Order categories appear in the rail. */
   catOrder: string[];
   filter: string;
@@ -46,39 +61,16 @@ export interface GtmState {
 
 const STORAGE_KEY = "titan-os.gtm.v2";
 
-/** 30-minute unlock window, refreshed on each send. Mirrors the real design. */
-const UNLOCK_TTL_MS = 30 * 60 * 1000;
-
-/** Phase-0 mock PIN. The real build derives an encryption key from it instead. */
-const MOCK_PIN = "1234";
-
 const DEFAULT_CAT_ORDER = ["vc", "angel", "cesto", "partner", "kol", "exchange", "mm"];
 
-/** Groups that aren't admin — flagged in the review modal ("sends as member"). */
+/** Telegram ids of groups the user isn't admin in — flagged "sends as member". */
 export const NOT_ADMIN = new Set(["g6", "g7"]);
-
-/** The catalog a "sync" reveals, in the order Telegram would return them. */
-const CATALOG: GtmGroup[] = [
-  { id: "g1", name: "Cesto × Paradigm", handle: "@cesto_paradigm", members: 8, cats: ["vc"] },
-  { id: "g2", name: "Cesto × a16z crypto", handle: "@cesto_a16z", members: 6, cats: ["vc"] },
-  { id: "g3", name: "Cesto Angels", handle: "@cesto_angels", members: 24, cats: ["angel"] },
-  { id: "g4", name: "Cesto × Coinbase BD", handle: "@cesto_cb", members: 5, cats: ["partner", "exchange"] },
-  { id: "g5", name: "Cesto Power Users", handle: "@cesto_power", members: 156, cats: ["cesto"] },
-  { id: "g6", name: "Cesto Community DAO", handle: "@cesto_dao", members: 312, cats: ["cesto"] },
-  { id: "g7", name: "Cesto KOL Circle", handle: "@cesto_kol", members: 41, cats: ["kol"] },
-  { id: "g8", name: "Cesto × Pantera", handle: "@cesto_pantera", members: 7, cats: [] },
-  { id: "g9", name: "Cesto Market Makers", handle: "@cesto_mm", members: 12, cats: ["mm"] },
-  { id: "g10", name: "Cesto Builders Guild", handle: "@cesto_builders", members: 88, cats: [] },
-];
 
 function loadState(): GtmState {
   const base: GtmState = {
     phase: "loggedOut",
     userId: "",
     pinSet: false,
-    synced: false,
-    groups: [],
-    syncedAt: 0,
     catOrder: [...DEFAULT_CAT_ORDER],
     filter: "cesto",
   };
@@ -94,48 +86,52 @@ function loadState(): GtmState {
       ...d,
       phase,
       catOrder: d.catOrder ?? base.catOrder,
-      groups: d.groups ?? [],
     };
   } catch {
     return base;
   }
 }
 
-function clone(groups: GtmGroup[]): GtmGroup[] {
-  return groups.map((g) => ({ ...g, cats: [...g.cats] }));
-}
-
 export function useGtm() {
   const [state, setState] = useState<GtmState>(loadState);
-  const [syncing, setSyncing] = useState(false);
-  /**
-   * When the current unlock expires (epoch ms), or 0 when locked. Kept in
-   * memory only — never persisted — so closing the tab or reloading re-locks,
-   * exactly as the real in-memory session lock would behave.
-   */
-  const [unlockedUntil, setUnlockedUntil] = useState(0);
-  const syncTimer = useRef<number | undefined>(undefined);
-  const lockTimer = useRef<number | undefined>(undefined);
 
-  // Persist the durable slice on every change. `phase` and `unlockedUntil` are
-  // intentionally excluded: a linked account is re-derived as `locked` on load
-  // (see loadState), and the unlock window lives only in memory.
+  // The unlocked-or-not boolean is owned by the sessionLock module singleton;
+  // subscribe so phase/TTL stay in sync even across components.
+  const lockUnlocked = useSyncExternalStore(lock.subscribe, lock.getSnapshot);
+
+  // Persist the durable slice on every change. `phase` is excluded: a linked
+  // account is re-derived as `locked` on load (the unlock lives only in memory).
   useEffect(() => {
     try {
       const { phase: _phase, ...durable } = state;
       localStorage.setItem(STORAGE_KEY, JSON.stringify(durable));
     } catch {
-      /* storage full / unavailable — fine for a mock */
+      /* storage full / unavailable */
     }
   }, [state]);
 
-  useEffect(
-    () => () => {
-      window.clearTimeout(syncTimer.current);
-      window.clearTimeout(lockTimer.current);
-    },
-    []
-  );
+  // On mount, reconcile `pinSet` with whether a vault actually exists on this
+  // device (e.g. the vault was wiped elsewhere, or state predates it).
+  useEffect(() => {
+    let alive = true;
+    hasVault().then((exists) => {
+      if (!alive) return;
+      setState((s) =>
+        s.pinSet === exists ? s : { ...s, pinSet: exists, phase: exists ? "locked" : "loggedOut" }
+      );
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  // Keep the rendered phase honest: if the lock module re-locked (TTL expiry,
+  // pagehide), drop out of the `unlocked` phase.
+  useEffect(() => {
+    if (!lockUnlocked) {
+      setState((s) => (s.phase === "unlocked" ? { ...s, phase: "locked" } : s));
+    }
+  }, [lockUnlocked]);
 
   const handle = useMemo(() => {
     const u = state.userId.trim();
@@ -147,20 +143,10 @@ export function useGtm() {
     setState((s) => ({ ...s, [key]: value }));
   }, []);
 
-  /** Arm (or refresh) the 30-minute unlock window and schedule the auto-lock. */
-  const armUnlock = useCallback(() => {
-    window.clearTimeout(lockTimer.current);
-    setUnlockedUntil(Date.now() + UNLOCK_TTL_MS);
-    lockTimer.current = window.setTimeout(() => {
-      setUnlockedUntil(0);
-      setState((s) => (s.phase === "unlocked" ? { ...s, phase: "locked" } : s));
-    }, UNLOCK_TTL_MS);
-  }, []);
-
   /**
-   * Mock QR login: simulates the user scanning the QR from their phone and
-   * approving. In the real build this is signInUserWithQrCode → a session
-   * string. Here it just records a handle and advances to the set-PIN step.
+   * QR login. Phase 3 replaces this with a real signInUserWithQrCode that
+   * yields a session string; for now it records the handle and advances to the
+   * set-PIN step. (The placeholder session is what setPin encrypts.)
    */
   const qrLoginMock = useCallback((rawHandle: string) => {
     const u = rawHandle.trim();
@@ -169,200 +155,112 @@ export function useGtm() {
   }, []);
 
   /**
-   * Mock set-PIN: in the real build this derives an AES key from the PIN and
-   * encrypts the session into IndexedDB. Here it just marks the account linked
-   * and drops to the locked screen (the user then enters the PIN to unlock).
+   * Set the broadcast PIN: derive an AES key from it and encrypt the session
+   * into IndexedDB, then drop to the locked screen. Returns false on a too-short
+   * PIN or if a vault already exists (caller should reset first).
    */
-  const setPinMock = useCallback((pin: string) => {
+  const setPin = useCallback(async (pin: string): Promise<boolean> => {
     if (pin.trim().length < 4) return false;
+    try {
+      await createVault(pin, PLACEHOLDER_SESSION);
+    } catch (e) {
+      if (e instanceof VaultError && e.code === "EXISTS") {
+        // Vault already present — just move to the locked screen to unlock it.
+        setState((s) => ({ ...s, pinSet: true, phase: "locked" }));
+        return true;
+      }
+      return false;
+    }
     setState((s) => ({ ...s, pinSet: true, phase: "locked" }));
     return true;
   }, []);
 
   /**
-   * Mock unlock: validates the PIN (Phase 0 accepts MOCK_PIN), arms the
-   * in-memory 30-minute window, and moves to the unlocked phase. Returns false
-   * on a wrong PIN so the UI can show "incorrect PIN".
+   * Unlock with the PIN: decrypts the vault key into memory (30-min TTL) and
+   * moves to the unlocked phase. Returns false on a wrong PIN.
    */
-  const unlockMock = useCallback(
-    (pin: string): boolean => {
-      if (pin !== MOCK_PIN) return false;
-      armUnlock();
-      setState((s) => ({ ...s, phase: "unlocked" }));
-      return true;
-    },
-    [armUnlock]
-  );
+  const unlock = useCallback(async (pin: string): Promise<boolean> => {
+    try {
+      await lock.unlockWithPin(pin);
+    } catch {
+      return false; // wrong PIN (or no vault)
+    }
+    setState((s) => ({ ...s, phase: "unlocked" }));
+    return true;
+  }, []);
 
   /** Refresh the unlock window — call at the start of every broadcast send. */
-  const touchMock = useCallback(() => {
-    setUnlockedUntil((cur) => {
-      if (!cur) return cur; // locked — nothing to refresh
-      armUnlock();
-      return Date.now() + UNLOCK_TTL_MS;
-    });
-  }, [armUnlock]);
+  const touch = useCallback(() => lock.touch(), []);
 
-  /** Manual "Lock now" / TTL expiry: zeroize the window and re-lock. */
-  const lock = useCallback(() => {
-    window.clearTimeout(lockTimer.current);
-    setUnlockedUntil(0);
+  /** Manual "Lock now": drop the in-memory key and re-lock. */
+  const lockNow = useCallback(() => {
+    lock.lock();
     setState((s) => (s.pinSet ? { ...s, phase: "locked" } : s));
   }, []);
 
-  /** Unlink the account entirely (forgotten PIN / disconnect): back to QR. */
-  const disconnect = useCallback(() => {
-    window.clearTimeout(lockTimer.current);
-    setUnlockedUntil(0);
+  /** Unlink the account entirely (forgotten PIN / disconnect): wipe + back to QR. */
+  const disconnect = useCallback(async () => {
+    lock.lock();
+    await wipe();
     setState((s) => ({ ...s, phase: "loggedOut", pinSet: false }));
   }, []);
 
-  const reset = useCallback(() => {
+  const reset = useCallback(async () => {
     try {
       localStorage.removeItem(STORAGE_KEY);
     } catch {
       /* ignore */
     }
-    window.clearTimeout(lockTimer.current);
-    setUnlockedUntil(0);
+    lock.lock();
+    await wipe();
     setState(loadState());
   }, []);
 
-  /**
-   * Simulate a Telegram sync. First sync seeds 8 groups; later syncs reveal one
-   * more from the catalog (flagged "new") until the catalog is exhausted.
-   * Returns a toast message describing what happened.
-   */
-  const sync = useCallback((onToast?: (msg: string) => void) => {
-    setSyncing((cur) => {
-      if (cur) return cur;
-      window.clearTimeout(syncTimer.current);
-      syncTimer.current = window.setTimeout(() => {
-        setState((s) => {
-          if (!s.synced) {
-            const groups = clone(CATALOG.slice(0, 8));
-            onToast?.("Synced 8 groups from Telegram");
-            return { ...s, synced: true, groups, syncedAt: Date.now() };
-          }
-          const next = CATALOG[s.groups.length];
-          if (!next) {
-            onToast?.("No new groups found");
-            return { ...s, syncedAt: Date.now() };
-          }
-          const cleared = s.groups.map((g) => ({ ...g, isNew: false }));
-          const groups = [...cleared, { ...next, cats: [...next.cats], isNew: true }];
-          onToast?.("+1 new group · " + next.name);
-          return { ...s, groups, syncedAt: Date.now() };
-        });
-        setSyncing(false);
-      }, 750);
-      return true;
-    });
-  }, []);
+  // ---- category rail order (group membership lives in useGtmGroups) ----
 
-  // ---- selection-independent group mutations ----
+  /** Normalize a free-typed category name to a slug. */
+  const normalizeCat = useCallback(
+    (raw: string) => raw.trim().toLowerCase().replace(/\s+/g, "-"),
+    []
+  );
 
-  const toggleGroupCat = useCallback((gid: string, cid: string) => {
-    setState((s) => ({
-      ...s,
-      groups: s.groups.map((g) =>
-        g.id === gid
-          ? { ...g, cats: g.cats.includes(cid) ? g.cats.filter((c) => c !== cid) : [...g.cats, cid] }
-          : g
-      ),
-    }));
-  }, []);
+  /** Register a category in the rail order if new. Returns its slug (or null). */
+  const registerCat = useCallback(
+    (rawCat: string): string | null => {
+      const cat = normalizeCat(rawCat);
+      if (!cat) return null;
+      setState((s) =>
+        s.catOrder.includes(cat) ? s : { ...s, catOrder: [...s.catOrder, cat] }
+      );
+      return cat;
+    },
+    [normalizeCat]
+  );
 
-  /** Add a brand-new category (registering it in catOrder) to one group. */
-  const addCategoryToGroup = useCallback((gid: string, rawCat: string) => {
-    const cat = rawCat.trim().toLowerCase().replace(/\s+/g, "-");
-    if (!cat) return;
-    setState((s) => ({
-      ...s,
-      catOrder: s.catOrder.includes(cat) ? s.catOrder : [...s.catOrder, cat],
-      groups: s.groups.map((g) =>
-        g.id === gid ? { ...g, cats: g.cats.includes(cat) ? g.cats : [...g.cats, cat] } : g
-      ),
-    }));
-  }, []);
-
-  /**
-   * Tri-state bulk toggle across a set of groups: if every selected group
-   * already has the category, remove it from all; otherwise add it to all.
-   * Returns true when the net action was "add", false when "remove".
-   */
-  const bulkToggleCat = useCallback((ids: string[], cid: string): boolean => {
-    let added = true;
-    setState((s) => {
-      const sel = s.groups.filter((g) => ids.includes(g.id));
-      if (!sel.length) return s;
-      const allHave = sel.every((g) => g.cats.includes(cid));
-      added = !allHave;
-      return {
-        ...s,
-        groups: s.groups.map((g) => {
-          if (!ids.includes(g.id)) return g;
-          if (allHave) return { ...g, cats: g.cats.filter((c) => c !== cid) };
-          return g.cats.includes(cid) ? g : { ...g, cats: [...g.cats, cid] };
-        }),
-      };
-    });
-    return added;
-  }, []);
-
-  const bulkAddNewCat = useCallback((ids: string[], rawCat: string): string | null => {
-    const cat = rawCat.trim().toLowerCase().replace(/\s+/g, "-");
-    if (!cat) return null;
-    setState((s) => ({
-      ...s,
-      catOrder: s.catOrder.includes(cat) ? s.catOrder : [...s.catOrder, cat],
-      groups: s.groups.map((g) =>
-        ids.includes(g.id) ? (g.cats.includes(cat) ? g : { ...g, cats: [...g.cats, cat] }) : g
-      ),
-    }));
-    return cat;
-  }, []);
-
-  const syncedAgo = useCallback(() => {
-    const t = state.syncedAt;
-    if (!t) return "just now";
-    const d = Math.floor((Date.now() - t) / 1000);
-    if (d < 60) return "just now";
-    if (d < 3600) return Math.floor(d / 60) + "m ago";
-    return Math.floor(d / 3600) + "h ago";
-  }, [state.syncedAt]);
-
-  const unlocked = state.phase === "unlocked" && unlockedUntil > Date.now();
+  const unlocked = state.phase === "unlocked" && lockUnlocked;
 
   /** Remaining unlock time as "mm:ss" (clamped at 0), for the TTL pill. */
   const ttlLabel = useCallback(() => {
-    const ms = Math.max(0, unlockedUntil - Date.now());
-    const total = Math.floor(ms / 1000);
+    const total = Math.floor(lock.remainingMs() / 1000);
     const m = Math.floor(total / 60);
     const s = total % 60;
     return `${m}:${s.toString().padStart(2, "0")}`;
-  }, [unlockedUntil]);
+  }, []);
 
   return {
     state,
-    syncing,
     handle,
     unlocked,
-    unlockedUntil,
     setField,
     qrLoginMock,
-    setPinMock,
-    unlockMock,
-    touchMock,
-    lock,
+    setPin,
+    unlock,
+    touch,
+    lockNow,
     disconnect,
     reset,
-    sync,
-    toggleGroupCat,
-    addCategoryToGroup,
-    bulkToggleCat,
-    bulkAddNewCat,
-    syncedAgo,
+    normalizeCat,
+    registerCat,
     ttlLabel,
   };
 }

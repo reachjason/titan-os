@@ -133,6 +133,22 @@ export const config = {
     searchRecentKey: "titan-os.search.recent.v1",
     /** Remembers preferences (timestamps, task tags). */
     prefsKey: "titan-os.prefs.v1",
+    /**
+     * GTM session vault — the Telegram session string is encrypted at rest here
+     * (IndexedDB), under a key derived from the broadcast PIN. Nothing sensitive
+     * is ever in localStorage; this block only holds the store coordinates and
+     * tuning, not secrets.
+     */
+    vault: {
+      dbName: "titan-os.vault",
+      storeName: "session",
+      recordKey: "current",
+      version: 1,
+      /** Unlock window, refreshed on each send. */
+      ttlMs: 30 * 60 * 1000,
+      /** PBKDF2 work factor for deriving the AES key from the PIN. */
+      pbkdf2Iterations: 600_000,
+    },
   },
 
   /**

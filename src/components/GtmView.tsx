@@ -1,14 +1,16 @@
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { ThemeContext } from "../store/ThemeContext";
 import { useGtm, NOT_ADMIN, type GtmGroup } from "../store/useGtm";
+import { useGtmGroups } from "../store/useGtmGroups";
 import { categoryColor } from "../lib/gtmCategories";
 
 /**
- * GTM · Go-to-Market broadcast tool. A frontend-only (mock) section that lets
- * you connect Telegram, sync the groups you're in, tag them into categories,
- * and broadcast one message to every group in a category. Mirrors the design
- * prototype's two-pane + persistent-compose-dock layout, rebuilt on Titan's
- * theme tokens so it follows light/dark like the rest of the app.
+ * GTM · Go-to-Market broadcast tool. Connect Telegram, sync the groups you're
+ * in, tag them into categories, and broadcast one message to every group in a
+ * category. Group metadata is cached in Convex (useGtmGroups); the connect →
+ * unlock lifecycle + per-device UI prefs live in useGtm. Broadcast sending is
+ * still simulated until Phase 3 wires real Telegram. Mirrors the design
+ * prototype's two-pane + persistent-compose-dock layout on Titan's theme tokens.
  */
 
 type ActiveCat = "all" | "uncat" | string;
@@ -17,6 +19,8 @@ export function GtmView({ onToast }: { onToast: (msg: string) => void }) {
   const theme = useContext(ThemeContext);
   const gtm = useGtm();
   const { state } = gtm;
+  const gg = useGtmGroups();
+  const groups = gg.groups;
 
   // ---- transient UI state (not persisted) ----
   const [activeCat, setActiveCat] = useState<ActiveCat>("all");
@@ -57,22 +61,22 @@ export function GtmView({ onToast }: { onToast: (msg: string) => void }) {
   }, [gtm.unlocked]);
 
   // ---- derived data ----
-  const countFor = (cid: string) => state.groups.filter((g) => g.cats.includes(cid)).length;
-  const uncatCount = state.groups.filter((g) => g.cats.length === 0).length;
+  const countFor = (cid: string) => groups.filter((g) => g.cats.includes(cid)).length;
+  const uncatCount = groups.filter((g) => g.cats.length === 0).length;
 
   const visibleGroups = useMemo(() => {
-    return state.groups.filter((g) =>
+    return groups.filter((g) =>
       activeCat === "all"
         ? true
         : activeCat === "uncat"
           ? g.cats.length === 0
           : g.cats.includes(activeCat)
     );
-  }, [state.groups, activeCat]);
+  }, [groups, activeCat]);
 
   const viewIds = visibleGroups.map((g) => g.id);
   const allInView = viewIds.length > 0 && viewIds.every((i) => selected.includes(i));
-  const recipients = state.groups
+  const recipients = groups
     .filter((g) => selected.includes(g.id))
     .reduce((a, g) => a + g.members, 0);
   const canSend = selected.length > 0 && message.trim().length > 0;
@@ -90,7 +94,7 @@ export function GtmView({ onToast }: { onToast: (msg: string) => void }) {
     );
 
   const broadcastCat = (cid: string) => {
-    const ids = state.groups.filter((g) => g.cats.includes(cid)).map((g) => g.id);
+    const ids = groups.filter((g) => g.cats.includes(cid)).map((g) => g.id);
     setSelected(ids);
     setActiveCat(cid);
     onToast(`Selected ${ids.length} ${cid} group${ids.length === 1 ? "" : "s"}`);
@@ -103,7 +107,7 @@ export function GtmView({ onToast }: { onToast: (msg: string) => void }) {
 
   const onTest = () => {
     if (!canSend) return;
-    gtm.touchMock(); // sending counts as activity → refresh the unlock window
+    gtm.touch(); // sending counts as activity → refresh the unlock window
     setTested(true);
     onToast("Test delivered to " + gtm.handle);
   };
@@ -117,7 +121,7 @@ export function GtmView({ onToast }: { onToast: (msg: string) => void }) {
   const doSend = () => {
     if (!confirmed || sending) return;
     const total = selected.length;
-    gtm.touchMock(); // a real broadcast keeps the 30-min unlock window alive
+    gtm.touch(); // a real broadcast keeps the 30-min unlock window alive
     setSending(true);
     setSentCount(0);
     setSentTotal(total);
@@ -145,9 +149,9 @@ export function GtmView({ onToast }: { onToast: (msg: string) => void }) {
     }, step * total + 500);
   };
 
-  const bulkToggle = (cid: string) => {
-    const added = gtm.bulkToggleCat(selected, cid);
+  const bulkToggle = async (cid: string) => {
     const n = selected.length;
+    const added = await gg.bulkToggleCat(selected, cid);
     onToast(`${added ? "Added " : "Removed "}${cid}${added ? " to " : " from "}${n} group${n === 1 ? "" : "s"}`);
   };
 
@@ -221,10 +225,12 @@ export function GtmView({ onToast }: { onToast: (msg: string) => void }) {
                 <button
                   className="gtm-btn gtm-btn-primary"
                   disabled={!pinReady}
-                  onClick={() => {
-                    if (gtm.setPinMock(pinDraft)) {
+                  onClick={async () => {
+                    if (await gtm.setPin(pinDraft)) {
                       setPinDraft("");
                       onToast("PIN set · enter it to unlock");
+                    } else {
+                      onToast("Couldn't set PIN — try again");
                     }
                   }}
                 >
@@ -247,8 +253,8 @@ export function GtmView({ onToast }: { onToast: (msg: string) => void }) {
   // LOCKED — enter the broadcast PIN to unlock this session
   // =========================================================================
   if (state.phase === "locked") {
-    const tryUnlock = () => {
-      if (gtm.unlockMock(unlockPin)) {
+    const tryUnlock = async () => {
+      if (await gtm.unlock(unlockPin)) {
         setUnlockPin("");
         setPinError(false);
         onToast("Unlocked · 30:00");
@@ -289,18 +295,24 @@ export function GtmView({ onToast }: { onToast: (msg: string) => void }) {
             <button className="gtm-btn gtm-btn-primary" disabled={!unlockPin} onClick={tryUnlock}>
               Unlock →
             </button>
-            <button className="gtm-textbtn" onClick={gtm.disconnect}>
+            <button className="gtm-textbtn" onClick={() => void gtm.disconnect()}>
               use a different account
             </button>
           </div>
-          <div className="gtm-footnote gtm-faint gtm-sm">demo PIN · 1234</div>
+          <div className="gtm-footnote gtm-faint gtm-sm">
+            <span className="gtm-mono">⌁</span> Decrypts on this device · forgot it? re-link via QR
+          </div>
         </div>
       </div>
     );
   }
 
   // Connbar with the live unlock pill, shared by the empty and main views.
-  const newGroupCount = state.groups.filter((g) => g.isNew).length;
+  const newGroupCount = groups.filter((g) => g.isNew).length;
+  const dismissNewGroups = () => {
+    setNewGroupsDismissed(true);
+    gg.clearNew(); // persist: clear the isNew flags in Convex
+  };
   const renderConnbar = () => (
     <div className="gtm-connbar">
       <span className="gtm-connbar-status">
@@ -311,7 +323,7 @@ export function GtmView({ onToast }: { onToast: (msg: string) => void }) {
         <span className="gtm-ttl-lock">🔓</span> Unlocked
         <span className="gtm-mono gtm-ttl-clock">{gtm.ttlLabel()}</span>
       </span>
-      <button className="gtm-textbtn" onClick={gtm.lock}>
+      <button className="gtm-textbtn" onClick={gtm.lockNow}>
         lock now
       </button>
     </div>
@@ -327,7 +339,7 @@ export function GtmView({ onToast }: { onToast: (msg: string) => void }) {
           </strong>{" "}
           since your last sync.
         </span>
-        <button className="gtm-textbtn" onClick={() => setNewGroupsDismissed(true)}>
+        <button className="gtm-textbtn" onClick={dismissNewGroups}>
           dismiss
         </button>
       </div>
@@ -336,7 +348,7 @@ export function GtmView({ onToast }: { onToast: (msg: string) => void }) {
   // =========================================================================
   // EMPTY (unlocked, not synced)
   // =========================================================================
-  if (!state.synced) {
+  if (!gg.synced) {
     return (
       <div className="gtm-root">
         {renderConnbar()}
@@ -356,10 +368,10 @@ export function GtmView({ onToast }: { onToast: (msg: string) => void }) {
           </div>
           <button
             className="gtm-btn gtm-btn-primary gtm-btn-lg"
-            onClick={() => gtm.sync(onToast)}
+            onClick={() => gg.sync(onToast)}
           >
-            <span className={gtm.syncing ? "gtm-spin" : ""}>⟳</span>{" "}
-            {gtm.syncing ? "Syncing…" : "Sync from Telegram"}
+            <span className={gg.syncing ? "gtm-spin" : ""}>⟳</span>{" "}
+            {gg.syncing ? "Syncing…" : "Sync from Telegram"}
           </button>
           <div className="gtm-faint gtm-sm gtm-empty-foot">
             First sync may take a moment depending on how many groups you're in.
@@ -388,7 +400,7 @@ export function GtmView({ onToast }: { onToast: (msg: string) => void }) {
   railRows.push({
     key: "all",
     label: "All groups",
-    count: state.groups.length,
+    count: groups.length,
     isCat: false,
     active: activeCat === "all",
     dotColor: "var(--ink-faint)",
@@ -468,6 +480,7 @@ export function GtmView({ onToast }: { onToast: (msg: string) => void }) {
               className="gtm-btn gtm-btn-ghost"
               onClick={() => {
                 gtm.reset();
+                gg.clearAll(); // also drop the cached groups in Convex
                 setActiveCat("all");
                 setSelected([]);
                 setMessage("");
@@ -483,8 +496,8 @@ export function GtmView({ onToast }: { onToast: (msg: string) => void }) {
     );
   }
 
-  const sheetGroup = sheetId ? state.groups.find((g) => g.id === sheetId) : null;
-  const selGroups = state.groups.filter((g) => selected.includes(g.id));
+  const sheetGroup = sheetId ? groups.find((g) => g.id === sheetId) : null;
+  const selGroups = groups.filter((g) => selected.includes(g.id));
 
   return (
     <div className="gtm-root gtm-main">
@@ -495,7 +508,7 @@ export function GtmView({ onToast }: { onToast: (msg: string) => void }) {
         <aside className="gtm-rail">
           <div className="gtm-rail-head">
             <span className="gtm-mono gtm-eyebrow">CATEGORIES</span>
-            <span className="gtm-mono gtm-faint gtm-sm">{state.groups.length} total</span>
+            <span className="gtm-mono gtm-faint gtm-sm">{groups.length} total</span>
           </div>
           <div className="gtm-rail-list">
             {railRows.map((r) => (
@@ -518,9 +531,9 @@ export function GtmView({ onToast }: { onToast: (msg: string) => void }) {
             ))}
           </div>
           <div className="gtm-rail-foot">
-            <span className="gtm-faint gtm-sm">Synced {gtm.syncedAgo()}</span>
-            <button className="gtm-btn gtm-btn-ghost gtm-btn-sm" onClick={() => gtm.sync(onToast)}>
-              <span className={gtm.syncing ? "gtm-spin" : ""}>⟳</span> Sync
+            <span className="gtm-faint gtm-sm">{groups.length} groups cached</span>
+            <button className="gtm-btn gtm-btn-ghost gtm-btn-sm" onClick={() => gg.sync(onToast)}>
+              <span className={gg.syncing ? "gtm-spin" : ""}>⟳</span> Sync
             </button>
           </div>
         </aside>
@@ -563,12 +576,12 @@ export function GtmView({ onToast }: { onToast: (msg: string) => void }) {
                         chipStyle={chipStyle}
                         catColor={catColor}
                         onToggle={bulkToggle}
-                        onAddNew={(text) => {
-                          const cat = gtm.bulkAddNewCat(selected, text);
-                          if (cat)
-                            onToast(
-                              `Added ${cat} to ${selected.length} group${selected.length === 1 ? "" : "s"}`
-                            );
+                        onAddNew={async (text) => {
+                          const cat = gtm.registerCat(text);
+                          if (!cat) return;
+                          const n = selected.length;
+                          await gg.bulkToggleCat(selected, cat);
+                          onToast(`Added ${cat} to ${n} group${n === 1 ? "" : "s"}`);
                         }}
                       />
                     </>
@@ -658,8 +671,11 @@ export function GtmView({ onToast }: { onToast: (msg: string) => void }) {
           catOrder={state.catOrder}
           chipStyle={chipStyle}
           catColor={catColor}
-          onToggle={(cid) => gtm.toggleGroupCat(sheetGroup.id, cid)}
-          onAddNew={(text) => gtm.addCategoryToGroup(sheetGroup.id, text)}
+          onToggle={(cid) => gg.toggleGroupCat(sheetGroup.id, cid)}
+          onAddNew={(text) => {
+            const cat = gtm.registerCat(text);
+            if (cat) gg.toggleGroupCat(sheetGroup.id, cat);
+          }}
           onClose={() => setSheetId(null)}
         />
       )}
