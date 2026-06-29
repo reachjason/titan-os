@@ -3212,9 +3212,62 @@ kbd {
   gap: 8px;
   font-size: 12.5px;
   color: var(--ink-soft);
-  margin-right: auto;
 }
-/* Live unlock indicator — counts down from 30:00, resets on each send. */
+.gtm-connbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+/* Cesto-only filter toggle in the connbar. */
+.gtm-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--ink-soft);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 2px;
+}
+.gtm-toggle-track {
+  position: relative;
+  width: 30px;
+  height: 17px;
+  border-radius: 9px;
+  background: var(--dot);
+  transition: background var(--dur-press) var(--ease-out);
+  flex-shrink: 0;
+}
+.gtm-toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--bg-raised);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition: transform var(--dur-press) var(--ease-out);
+}
+.gtm-toggle-on .gtm-toggle-track {
+  background: var(--clay);
+}
+.gtm-toggle-on .gtm-toggle-thumb {
+  transform: translateX(13px);
+}
+.gtm-toggle-on {
+  color: var(--ink);
+}
+.gtm-toggle:focus-visible {
+  outline: 2px solid var(--clay);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Live unlock indicator. */
 .gtm-ttl-pill {
   display: inline-flex;
   align-items: center;
@@ -3498,6 +3551,10 @@ kbd {
   height: 38px;
   border-radius: 9px;
   font-size: 16px;
+}
+.gtm-avatar-img {
+  object-fit: cover;
+  background: var(--bg-sunk);
 }
 .gtm-grow-meta {
   flex: 1;

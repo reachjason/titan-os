@@ -47,10 +47,44 @@ export const list = query({
     const userId = await getAuthUserId(ctx);
     if (!userId) return [];
     // Bounded read — a user's partner-group set is small; 500 is a safe cap.
-    return await ctx.db
+    const rows = await ctx.db
       .query("gtmGroups")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .take(500);
+    // Resolve each stored photo to a signed URL the <img> can load.
+    return await Promise.all(
+      rows.map(async (g) => ({
+        ...g,
+        photoUrl: g.photoId ? await ctx.storage.getUrl(g.photoId) : null,
+      }))
+    );
+  },
+});
+
+/** A short-lived URL the client POSTs a group photo blob to (Convex storage). */
+export const generateUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    await requireUser(ctx);
+    return await ctx.storage.generateUploadUrl();
+  },
+});
+
+/** Attach an uploaded photo to a group (by tgId). Replaces any previous one. */
+export const setPhoto = mutation({
+  args: { tgId: v.string(), photoId: v.id("_storage") },
+  handler: async (ctx, { tgId, photoId }) => {
+    const userId = await requireUser(ctx);
+    const group = await byTgId(ctx, userId, tgId);
+    if (!group) {
+      // Group vanished between sync and upload — drop the orphaned blob.
+      await ctx.storage.delete(photoId);
+      return;
+    }
+    if (group.photoId && group.photoId !== photoId) {
+      await ctx.storage.delete(group.photoId); // clean up the old photo
+    }
+    await ctx.db.patch(group._id, { photoId, updatedAt: Date.now() });
   },
 });
 

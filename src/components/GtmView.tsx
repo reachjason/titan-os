@@ -49,7 +49,6 @@ export function GtmView({ onToast }: { onToast: (msg: string) => void }) {
   const [unlockPin, setUnlockPin] = useState("");
   const [pinError, setPinError] = useState(false);
   const [newGroupsDismissed, setNewGroupsDismissed] = useState(false);
-  const [, forceTick] = useState(0);
   const sendTimer = useRef<number | undefined>(undefined);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -61,26 +60,29 @@ export function GtmView({ onToast }: { onToast: (msg: string) => void }) {
 
   useEffect(() => () => window.clearInterval(sendTimer.current), []);
 
-  // While unlocked, tick once a second so the "Unlocked · mm:ss" pill counts down.
-  useEffect(() => {
-    if (!gtm.unlocked) return;
-    const id = window.setInterval(() => forceTick((n) => n + 1), 1000);
-    return () => window.clearInterval(id);
-  }, [gtm.unlocked]);
-
   // ---- derived data ----
-  const countFor = (cid: string) => groups.filter((g) => g.cats.includes(cid)).length;
-  const uncatCount = groups.filter((g) => g.cats.length === 0).length;
+  // Cesto-only toggle: when on, restrict to groups whose name/handle contains
+  // the keyword (default "cesto"). Everything below derives from this base.
+  const kw = state.filter.trim().toLowerCase();
+  const baseGroups = useMemo(() => {
+    if (!state.cestoOnly || !kw) return groups;
+    return groups.filter(
+      (g) => g.name.toLowerCase().includes(kw) || g.handle.toLowerCase().includes(kw)
+    );
+  }, [groups, state.cestoOnly, kw]);
+
+  const countFor = (cid: string) => baseGroups.filter((g) => g.cats.includes(cid)).length;
+  const uncatCount = baseGroups.filter((g) => g.cats.length === 0).length;
 
   const visibleGroups = useMemo(() => {
-    return groups.filter((g) =>
+    return baseGroups.filter((g) =>
       activeCat === "all"
         ? true
         : activeCat === "uncat"
           ? g.cats.length === 0
           : g.cats.includes(activeCat)
     );
-  }, [groups, activeCat]);
+  }, [baseGroups, activeCat]);
 
   const viewIds = visibleGroups.map((g) => g.id);
   const allInView = viewIds.length > 0 && viewIds.every((i) => selected.includes(i));
@@ -409,13 +411,27 @@ export function GtmView({ onToast }: { onToast: (msg: string) => void }) {
         <span className="gtm-dot gtm-dot-green" />
         Connected as <strong className="gtm-handle">{gtm.handle}</strong>
       </span>
-      <span className="gtm-ttl-pill" title="This unlock expires after 30 minutes of inactivity">
-        <span className="gtm-ttl-lock">🔓</span> Unlocked
-        <span className="gtm-mono gtm-ttl-clock">{gtm.ttlLabel()}</span>
-      </span>
-      <button className="gtm-textbtn" onClick={gtm.lockNow}>
-        lock now
+      <button
+        type="button"
+        role="switch"
+        aria-checked={state.cestoOnly}
+        className={`gtm-toggle${state.cestoOnly ? " gtm-toggle-on" : ""}`}
+        onClick={() => gtm.setField("cestoOnly", !state.cestoOnly)}
+        title="Show only groups matching “cesto”"
+      >
+        <span className="gtm-toggle-track">
+          <span className="gtm-toggle-thumb" />
+        </span>
+        Cesto only
       </button>
+      <span className="gtm-connbar-right">
+        <span className="gtm-ttl-pill" title="Unlocked for this session — re-locks automatically when idle">
+          <span className="gtm-ttl-lock">🔓</span> Unlocked
+        </span>
+        <button className="gtm-textbtn" onClick={gtm.lockNow}>
+          lock now
+        </button>
+      </span>
     </div>
   );
 
@@ -490,7 +506,7 @@ export function GtmView({ onToast }: { onToast: (msg: string) => void }) {
   railRows.push({
     key: "all",
     label: "All groups",
-    count: groups.length,
+    count: baseGroups.length,
     isCat: false,
     active: activeCat === "all",
     dotColor: "var(--ink-faint)",
@@ -698,13 +714,17 @@ export function GtmView({ onToast }: { onToast: (msg: string) => void }) {
                   >
                     {sel ? "✓" : ""}
                   </span>
-                  <div className="gtm-avatar" style={avatar}>
-                    C
-                  </div>
+                  {g.photoUrl ? (
+                    <img className="gtm-avatar gtm-avatar-img" src={g.photoUrl} alt="" />
+                  ) : (
+                    <div className="gtm-avatar" style={avatar}>
+                      {(g.name.trim()[0] || "?").toUpperCase()}
+                    </div>
+                  )}
                   <div className="gtm-grow-meta" onClick={() => toggleSelect(g.id)}>
                     <div className="gtm-grow-name">{g.name}</div>
                     <div className="gtm-mono gtm-faint gtm-sm">
-                      {g.members} members · {g.handle}
+                      {g.members} members{g.handle ? ` · ${g.handle}` : ""}
                     </div>
                   </div>
                   {g.isNew && <span className="gtm-badge-new">new</span>}
@@ -903,13 +923,17 @@ function CategorizeSheet({
       <div className="gtm-sheet">
         <div className="gtm-sheet-head">
           <div className="gtm-sheet-id">
-            <div className="gtm-avatar gtm-avatar-lg" style={avatar}>
-              C
-            </div>
+            {group.photoUrl ? (
+              <img className="gtm-avatar gtm-avatar-lg gtm-avatar-img" src={group.photoUrl} alt="" />
+            ) : (
+              <div className="gtm-avatar gtm-avatar-lg" style={avatar}>
+                {(group.name.trim()[0] || "?").toUpperCase()}
+              </div>
+            )}
             <div>
               <div className="gtm-sheet-name">{group.name}</div>
               <div className="gtm-mono gtm-faint gtm-sm">
-                {group.members} members · {group.handle}
+                {group.members} members{group.handle ? ` · ${group.handle}` : ""}
               </div>
             </div>
           </div>

@@ -34,6 +34,8 @@ export interface GtmGroup {
   cats: string[];
   /** Surfaced with a "new" badge until dismissed. */
   isNew?: boolean;
+  /** Signed URL of the group's profile photo, or null if none. */
+  photoUrl?: string | null;
 }
 
 /**
@@ -51,7 +53,10 @@ export interface GtmState {
   pinSet: boolean;
   /** Order categories appear in the rail. */
   catOrder: string[];
+  /** Keyword the Cesto-only toggle matches against group name/handle. */
   filter: string;
+  /** When true, the list shows only groups matching `filter` ("cesto"). */
+  cestoOnly: boolean;
 }
 
 const STORAGE_KEY = "titan-os.gtm.v2";
@@ -68,6 +73,7 @@ function loadState(): GtmState {
     pinSet: false,
     catOrder: [...DEFAULT_CAT_ORDER],
     filter: "cesto",
+    cestoOnly: false,
   };
   try {
     const raw = localStorage.getItem(STORAGE_KEY);

@@ -122,3 +122,22 @@ export async function fetchGroups(client: TelegramClient): Promise<FetchedGroup[
 export function toUpsert(g: FetchedGroup): Omit<GtmGroup, "id" | "isNew" | "cats"> {
   return { tgId: g.tgId, name: g.name, handle: g.handle, members: g.members };
 }
+
+/**
+ * Download a group's profile photo as a PNG/JPEG Blob, or null if it has none.
+ * Resolves the entity by tgId on the given (already-connected) client.
+ */
+export async function fetchGroupPhoto(
+  client: TelegramClient,
+  tgId: string
+): Promise<Blob | null> {
+  try {
+    const entity = await client.getEntity(tgId);
+    const buf = await client.downloadProfilePhoto(entity);
+    if (!buf || typeof buf === "string" || buf.length === 0) return null;
+    // GramJS returns a Buffer (Uint8Array). Wrap as a Blob for Convex upload.
+    return new Blob([new Uint8Array(buf)], { type: "image/jpeg" });
+  } catch {
+    return null; // no photo / not accessible — fine, fall back to the letter
+  }
+}

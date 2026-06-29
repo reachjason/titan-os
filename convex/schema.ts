@@ -73,6 +73,8 @@ export default defineSchema({
     cats: v.array(v.string()),
     /** Surfaced with a "new" badge until the user dismisses it. */
     isNew: v.boolean(),
+    /** Convex storage id of the group's profile photo, if downloaded. */
+    photoId: v.optional(v.id("_storage")),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
