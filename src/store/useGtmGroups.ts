@@ -4,18 +4,17 @@ import { api } from "../../convex/_generated/api";
 import type { FunctionReturnType } from "convex/server";
 import type { Id } from "../../convex/_generated/dataModel";
 import type { GtmGroup } from "./useGtm";
+import { withSession } from "../lib/sessionLock";
+import { connectClient, fetchGroups, toUpsert } from "../lib/telegramClient";
 
 /**
- * GTM group store, backed by Convex (real-time, per signed-in user). Replaces
- * the localStorage group state from the Phase-0 mock: the group list, category
- * tags, and the "new groups" diff now live server-side so they load instantly
- * and follow the user across devices.
+ * GTM group store, backed by Convex (real-time, per signed-in user). The group
+ * list, category tags, and the "new groups" diff live server-side so they load
+ * instantly and follow the user across devices.
  *
  * The Telegram session is NOT here — it stays client-side and encrypted. This
- * store is purely the non-sensitive group metadata cache.
- *
- * Until Phase 3 wires real Telegram, `sync()` seeds a demo catalog into Convex
- * so the rest of the flow is exercisable end-to-end against the real backend.
+ * store is purely the non-sensitive group metadata cache; `sync()` reaches into
+ * Telegram (via the unlocked session) to refresh it.
  */
 
 type GroupDoc = FunctionReturnType<typeof api.gtmGroups.list>[number];
@@ -32,20 +31,6 @@ function toGroup(doc: GroupDoc): GtmGroup {
     isNew: doc.isNew,
   };
 }
-
-/** The demo catalog a "sync" reveals — the same set the Phase-0 mock used. */
-const CATALOG = [
-  { tgId: "g1", name: "Cesto × Paradigm", handle: "@cesto_paradigm", members: 8, cats: ["vc"] },
-  { tgId: "g2", name: "Cesto × a16z crypto", handle: "@cesto_a16z", members: 6, cats: ["vc"] },
-  { tgId: "g3", name: "Cesto Angels", handle: "@cesto_angels", members: 24, cats: ["angel"] },
-  { tgId: "g4", name: "Cesto × Coinbase BD", handle: "@cesto_cb", members: 5, cats: ["partner", "exchange"] },
-  { tgId: "g5", name: "Cesto Power Users", handle: "@cesto_power", members: 156, cats: ["cesto"] },
-  { tgId: "g6", name: "Cesto Community DAO", handle: "@cesto_dao", members: 312, cats: ["cesto"] },
-  { tgId: "g7", name: "Cesto KOL Circle", handle: "@cesto_kol", members: 41, cats: ["kol"] },
-  { tgId: "g8", name: "Cesto × Pantera", handle: "@cesto_pantera", members: 7, cats: [] },
-  { tgId: "g9", name: "Cesto Market Makers", handle: "@cesto_mm", members: 12, cats: ["mm"] },
-  { tgId: "g10", name: "Cesto Builders Guild", handle: "@cesto_builders", members: 88, cats: [] },
-];
 
 export function useGtmGroups() {
   const docs = useQuery(api.gtmGroups.list);
@@ -65,30 +50,41 @@ export function useGtmGroups() {
   const gid = (id: string) => id as Id<"gtmGroups">;
 
   /**
-   * Sync groups from Telegram. Phase 1: seeds the demo catalog into Convex (the
-   * first sync reveals 8, later syncs reveal one more, flagged new) so the diff
-   * and badge work against the real backend. Phase 3 swaps the catalog for a
-   * real getDialogs() fetch. Returns a toast describing what happened.
+   * Sync groups from Telegram: connect with the unlocked session, fetch the
+   * dialog list, and upsert the groups/channels into Convex. Newly-seen groups
+   * are flagged isNew (drives the "Found N new groups" badge). Requires an
+   * unlocked session (withSession throws "LOCKED" otherwise). Returns a toast.
    */
   const sync = useCallback(
     async (onToast?: (msg: string) => void) => {
       if (syncing) return;
       setSyncing(true);
       try {
-        const have = docs?.length ?? 0;
-        const reveal = have === 0 ? CATALOG.slice(0, 8) : CATALOG.slice(0, Math.min(have + 1, CATALOG.length));
-        const { newTgIds } = await upsertManyM({ groups: reveal });
-        if (have === 0) onToast?.(`Synced ${reveal.length} groups from Telegram`);
-        else if (newTgIds.length === 0) onToast?.("No new groups found");
-        else {
-          const added = CATALOG.find((c) => c.tgId === newTgIds[0]);
-          onToast?.("+1 new group · " + (added?.name ?? newTgIds[0]));
-        }
+        const fetched = await withSession(async (session) => {
+          const client = await connectClient(session);
+          try {
+            return await fetchGroups(client);
+          } finally {
+            await client.disconnect();
+          }
+        });
+        const { newTgIds } = await upsertManyM({ groups: fetched.map(toUpsert) });
+        if (newTgIds.length === 0) onToast?.(`Synced ${fetched.length} groups · no new ones`);
+        else
+          onToast?.(
+            `Synced ${fetched.length} · ${newTgIds.length} new group${newTgIds.length === 1 ? "" : "s"}`
+          );
+      } catch (e) {
+        onToast?.(
+          (e as Error)?.message === "LOCKED"
+            ? "Unlock first to sync"
+            : "Sync failed — " + ((e as Error)?.message ?? "try again")
+        );
       } finally {
         setSyncing(false);
       }
     },
-    [docs, syncing, upsertManyM]
+    [syncing, upsertManyM]
   );
 
   const toggleGroupCat = useCallback(

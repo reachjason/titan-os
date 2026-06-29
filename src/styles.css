@@ -3163,6 +3163,14 @@ kbd {
   gap: 10px;
   box-shadow: var(--shadow-card);
 }
+.gtm-qr-img {
+  width: 200px;
+  height: 200px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-card);
+  display: block;
+}
 .gtm-qr-glyph {
   font-size: 76px;
   line-height: 1;

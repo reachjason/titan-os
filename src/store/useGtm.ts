@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import * as lock from "../lib/sessionLock";
-import { createVault, hasVault, wipe, VaultError } from "../lib/sessionVault";
+import { createVault, hasVault, wipe } from "../lib/sessionVault";
+import { qrLogin, type QrLoginHandlers } from "../lib/telegramClient";
 
 /**
  * GTM (Go-to-Market) store — the connect → unlock lifecycle and per-device UI
@@ -20,12 +21,6 @@ import { createVault, hasVault, wipe, VaultError } from "../lib/sessionVault";
 
 /** Connection lifecycle. `loggedOut` → (scan QR + set PIN) → `locked` → (enter PIN) → `unlocked`. */
 export type GtmPhase = "loggedOut" | "locked" | "unlocked";
-
-/**
- * Placeholder session encrypted by the vault until real QR login (Phase 3)
- * produces a true MTProto session string. It proves the vault end-to-end.
- */
-const PLACEHOLDER_SESSION = "titan-gtm-placeholder-session";
 
 export interface GtmGroup {
   /** Convex document id (the stable handle used by category mutations). */
@@ -144,36 +139,41 @@ export function useGtm() {
   }, []);
 
   /**
-   * QR login. Phase 3 replaces this with a real signInUserWithQrCode that
-   * yields a session string; for now it records the handle and advances to the
-   * set-PIN step. (The placeholder session is what setPin encrypts.)
+   * Link Telegram via QR + set the broadcast PIN, in one flow:
+   *  1. validate the PIN,
+   *  2. run the real QR login (renders the QR and prompts for 2FA via the given
+   *     handlers) to obtain a session string,
+   *  3. encrypt that session into the vault under the PIN, and
+   *  4. record the handle and drop to the locked screen.
+   * Returns an error string on failure (too-short PIN, login failed), or null
+   * on success. The plaintext session never leaves this function.
    */
-  const qrLoginMock = useCallback((rawHandle: string) => {
-    const u = rawHandle.trim();
-    if (!u) return;
-    setState((s) => ({ ...s, userId: u }));
-  }, []);
-
-  /**
-   * Set the broadcast PIN: derive an AES key from it and encrypt the session
-   * into IndexedDB, then drop to the locked screen. Returns false on a too-short
-   * PIN or if a vault already exists (caller should reset first).
-   */
-  const setPin = useCallback(async (pin: string): Promise<boolean> => {
-    if (pin.trim().length < 4) return false;
-    try {
-      await createVault(pin, PLACEHOLDER_SESSION);
-    } catch (e) {
-      if (e instanceof VaultError && e.code === "EXISTS") {
-        // Vault already present — just move to the locked screen to unlock it.
-        setState((s) => ({ ...s, pinSet: true, phase: "locked" }));
-        return true;
+  const linkTelegram = useCallback(
+    async (
+      pin: string,
+      handle: string,
+      handlers: QrLoginHandlers
+    ): Promise<string | null> => {
+      if (pin.trim().length < 4) return "PIN must be at least 4 characters";
+      // Start fresh: a stale vault would block createVault.
+      await wipe();
+      let session: string;
+      try {
+        session = await qrLogin(handlers);
+      } catch (e) {
+        return (e as Error)?.message || "Telegram login failed";
       }
-      return false;
-    }
-    setState((s) => ({ ...s, pinSet: true, phase: "locked" }));
-    return true;
-  }, []);
+      try {
+        await createVault(pin, session);
+      } catch {
+        return "Couldn't secure the session — try again";
+      }
+      const u = handle.trim();
+      setState((s) => ({ ...s, userId: u || s.userId, pinSet: true, phase: "locked" }));
+      return null;
+    },
+    []
+  );
 
   /**
    * Unlock with the PIN: decrypts the vault key into memory (30-min TTL) and
@@ -252,8 +252,7 @@ export function useGtm() {
     handle,
     unlocked,
     setField,
-    qrLoginMock,
-    setPin,
+    linkTelegram,
     unlock,
     touch,
     lockNow,

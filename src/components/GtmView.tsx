@@ -1,8 +1,10 @@
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
+import QRCode from "qrcode";
 import { ThemeContext } from "../store/ThemeContext";
 import { useGtm, NOT_ADMIN, type GtmGroup } from "../store/useGtm";
 import { useGtmGroups } from "../store/useGtmGroups";
 import { categoryColor } from "../lib/gtmCategories";
+import { runBroadcast, sendTestToSelf, type BroadcastTarget } from "../lib/broadcast";
 
 /**
  * GTM · Go-to-Market broadcast tool. Connect Telegram, sync the groups you're
@@ -35,15 +37,21 @@ export function GtmView({ onToast }: { onToast: (msg: string) => void }) {
   const [sentCount, setSentCount] = useState(0);
   const [sentTotal, setSentTotal] = useState(0);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  // ---- connect / unlock flow (Phase 0 mock) ----
+  // ---- connect / unlock flow ----
   const [handleDraft, setHandleDraft] = useState("");
-  const [scanned, setScanned] = useState(false);
   const [pinDraft, setPinDraft] = useState("");
+  // Connect sub-step: collect PIN → show QR (live) → optional 2FA prompt.
+  const [connectStep, setConnectStep] = useState<"pin" | "qr">("pin");
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+  const [linkError, setLinkError] = useState<string | null>(null);
+  const [twoFa, setTwoFa] = useState<{ resolve: (pw: string) => void } | null>(null);
+  const [twoFaInput, setTwoFaInput] = useState("");
   const [unlockPin, setUnlockPin] = useState("");
   const [pinError, setPinError] = useState(false);
   const [newGroupsDismissed, setNewGroupsDismissed] = useState(false);
   const [, forceTick] = useState(0);
   const sendTimer = useRef<number | undefined>(undefined);
+  const abortRef = useRef<AbortController | null>(null);
 
   const catColor = (cat: string) => categoryColor(cat, theme);
   const chipStyle = (cat: string) => {
@@ -105,11 +113,17 @@ export function GtmView({ onToast }: { onToast: (msg: string) => void }) {
     setBulkOpen(false);
   };
 
-  const onTest = () => {
+  const onTest = async () => {
     if (!canSend) return;
-    gtm.touch(); // sending counts as activity → refresh the unlock window
-    setTested(true);
-    onToast("Test delivered to " + gtm.handle);
+    try {
+      await sendTestToSelf(message); // also refreshes the unlock window
+      setTested(true);
+      onToast("Test delivered to your Saved Messages");
+    } catch (e) {
+      onToast(
+        (e as Error)?.message === "LOCKED" ? "Unlock first" : "Test failed — " + (e as Error)?.message
+      );
+    }
   };
 
   const openReview = () => {
@@ -118,35 +132,48 @@ export function GtmView({ onToast }: { onToast: (msg: string) => void }) {
     setReviewOpen(true);
   };
 
-  const doSend = () => {
+  const stopSend = () => abortRef.current?.abort();
+
+  const doSend = async () => {
     if (!confirmed || sending) return;
-    const total = selected.length;
-    gtm.touch(); // a real broadcast keeps the 30-min unlock window alive
+    const targets: BroadcastTarget[] = groups
+      .filter((g) => selected.includes(g.id))
+      .map((g) => ({ tgId: g.tgId, name: g.name }));
+    const total = targets.length;
     setSending(true);
     setSentCount(0);
     setSentTotal(total);
-    const step = Math.max(120, Math.min(280, 2200 / total));
-    window.clearInterval(sendTimer.current);
-    sendTimer.current = window.setInterval(() => {
-      setSentCount((n) => {
-        if (n + 1 >= total) {
-          window.clearInterval(sendTimer.current);
-          return total;
-        }
-        return n + 1;
-      });
-    }, step);
-    window.setTimeout(() => {
-      window.clearInterval(sendTimer.current);
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
+    try {
+      const result = await runBroadcast(
+        targets,
+        message,
+        (p) => {
+          if (p.status === "sent") setSentCount((n) => n + 1);
+        },
+        ctrl.signal
+      );
+      if (result.reason === "peer_flood") {
+        onToast(`Stopped: Telegram flagged the account (PEER_FLOOD) after ${result.sent}. Wait / contact @SpamBot.`);
+      } else if (result.aborted) {
+        onToast(`Stopped after ${result.sent} of ${total}`);
+      } else {
+        onToast(`Broadcast sent to ${result.sent} group${result.sent === 1 ? "" : "s"}`);
+        setReviewOpen(false);
+        setSelected([]);
+        setMessage("");
+        setTested(false);
+        setConfirmed(false);
+      }
+    } catch (e) {
+      onToast(
+        (e as Error)?.message === "LOCKED" ? "Unlock first to send" : "Send failed — " + (e as Error)?.message
+      );
+    } finally {
       setSending(false);
-      setReviewOpen(false);
-      setSelected([]);
-      setMessage("");
-      setTested(false);
-      setConfirmed(false);
-      setSentCount(0);
-      onToast(`Broadcast sent to ${total} group${total === 1 ? "" : "s"}`);
-    }, step * total + 500);
+      abortRef.current = null;
+    }
   };
 
   const bulkToggle = async (cid: string) => {
@@ -160,9 +187,36 @@ export function GtmView({ onToast }: { onToast: (msg: string) => void }) {
   // =========================================================================
   if (state.phase === "loggedOut") {
     const pinReady = pinDraft.trim().length >= 4;
-    const linkAndContinue = () => {
-      gtm.qrLoginMock(handleDraft || "@you");
-      setScanned(true);
+    // Kick off the real QR login: move to the QR step, then drive linkTelegram
+    // with callbacks that render the live QR and bridge the 2FA prompt to the UI.
+    const startLink = (pin: string) => {
+      setConnectStep("qr");
+      setQrDataUrl(null);
+      setLinkError(null);
+      void gtm
+        .linkTelegram(pin, handleDraft, {
+          onUrl: async (url) => {
+            try {
+              setQrDataUrl(await QRCode.toDataURL(url, { margin: 1, width: 320 }));
+            } catch {
+              /* keep prior QR if rendering hiccups */
+            }
+          },
+          getPassword: () =>
+            new Promise<string>((resolve) => {
+              setTwoFaInput("");
+              setTwoFa({ resolve });
+            }),
+        })
+        .then((err) => {
+          setTwoFa(null);
+          if (err) {
+            setLinkError(err);
+          } else {
+            setPinDraft("");
+            onToast("Linked · enter your PIN to unlock");
+          }
+        });
     };
     return (
       <div className="gtm-root gtm-connect">
@@ -171,44 +225,13 @@ export function GtmView({ onToast }: { onToast: (msg: string) => void }) {
             <span className="gtm-dot gtm-dot-amber" />
             TELEGRAM · NOT CONNECTED
           </div>
-          {!scanned ? (
-            <>
-              <h1 className="gtm-display">Link your Telegram</h1>
-              <p className="gtm-lede">
-                Open Telegram on your phone → <strong>Settings → Devices → Link Desktop
-                Device</strong>, then scan this code. Titan never sees your password.
-              </p>
-              <div className="gtm-qr-wrap">
-                <div className="gtm-qr" aria-label="Telegram login QR code (demo)">
-                  <div className="gtm-qr-glyph">⛶</div>
-                  <span className="gtm-qr-caption gtm-mono">scan to link</span>
-                </div>
-              </div>
-              <div className="gtm-field">
-                <label className="gtm-field-label">
-                  your handle <span className="gtm-faint">(for the demo)</span>
-                </label>
-                <input
-                  className="gtm-input"
-                  value={handleDraft}
-                  onChange={(e) => setHandleDraft(e.target.value)}
-                  placeholder="@jason"
-                />
-              </div>
-              <div className="gtm-connect-actions">
-                <button className="gtm-btn gtm-btn-primary" onClick={linkAndContinue}>
-                  I've scanned it →
-                </button>
-                <span className="gtm-hint">simulates a successful QR login</span>
-              </div>
-            </>
-          ) : (
+          {connectStep === "pin" ? (
             <>
               <h1 className="gtm-display">Set a broadcast PIN</h1>
               <p className="gtm-lede">
-                Linked as <strong className="gtm-handle">{gtm.handle}</strong>. Your PIN encrypts
-                the connection on this device — you'll enter it once per session to send. Forget it
-                and you simply re-scan; there's no recovery.
+                Pick a PIN that encrypts your Telegram connection on this device — you'll enter it
+                once per session to send. Forget it and you simply re-link; there's no recovery.
+                Next you'll scan a QR code to link Telegram.
               </p>
               <div className="gtm-field">
                 <label className="gtm-field-label">broadcast PIN</label>
@@ -221,22 +244,89 @@ export function GtmView({ onToast }: { onToast: (msg: string) => void }) {
                   placeholder="••••"
                 />
               </div>
+              <div className="gtm-field">
+                <label className="gtm-field-label">
+                  your handle <span className="gtm-faint">(optional label)</span>
+                </label>
+                <input
+                  className="gtm-input"
+                  value={handleDraft}
+                  onChange={(e) => setHandleDraft(e.target.value)}
+                  placeholder="@jason"
+                />
+              </div>
               <div className="gtm-connect-actions">
                 <button
                   className="gtm-btn gtm-btn-primary"
                   disabled={!pinReady}
-                  onClick={async () => {
-                    if (await gtm.setPin(pinDraft)) {
-                      setPinDraft("");
-                      onToast("PIN set · enter it to unlock");
-                    } else {
-                      onToast("Couldn't set PIN — try again");
-                    }
-                  }}
+                  onClick={() => startLink(pinDraft)}
                 >
-                  Set PIN &amp; continue →
+                  Link Telegram →
                 </button>
                 {!pinReady && <span className="gtm-hint">at least 4 characters</span>}
+              </div>
+            </>
+          ) : (
+            <>
+              <h1 className="gtm-display">Scan to link Telegram</h1>
+              <p className="gtm-lede">
+                Open Telegram on your phone → <strong>Settings → Devices → Link Desktop
+                Device</strong>, then scan this code. Titan never sees your password.
+              </p>
+              <div className="gtm-qr-wrap">
+                {qrDataUrl ? (
+                  <img className="gtm-qr-img" src={qrDataUrl} alt="Telegram login QR code" />
+                ) : (
+                  <div className="gtm-qr" aria-label="Generating QR code">
+                    <div className="gtm-qr-glyph gtm-spin">⟳</div>
+                    <span className="gtm-qr-caption gtm-mono">generating…</span>
+                  </div>
+                )}
+              </div>
+              {twoFa && (
+                <div className="gtm-field">
+                  <label className="gtm-field-label">two-factor password</label>
+                  <input
+                    className="gtm-input"
+                    type="password"
+                    autoFocus
+                    value={twoFaInput}
+                    onChange={(e) => setTwoFaInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && twoFaInput) {
+                        twoFa.resolve(twoFaInput);
+                        setTwoFa(null);
+                      }
+                    }}
+                    placeholder="your Telegram 2FA password"
+                  />
+                  <div className="gtm-connect-actions">
+                    <button
+                      className="gtm-btn gtm-btn-primary"
+                      disabled={!twoFaInput}
+                      onClick={() => {
+                        twoFa.resolve(twoFaInput);
+                        setTwoFa(null);
+                      }}
+                    >
+                      Submit →
+                    </button>
+                  </div>
+                </div>
+              )}
+              {linkError && <div className="gtm-pin-err gtm-sm">{linkError}</div>}
+              <div className="gtm-connect-actions">
+                <button
+                  className="gtm-textbtn"
+                  onClick={() => {
+                    setConnectStep("pin");
+                    setQrDataUrl(null);
+                    setTwoFa(null);
+                    setLinkError(null);
+                  }}
+                >
+                  ← back
+                </button>
               </div>
             </>
           )}
@@ -694,6 +784,7 @@ export function GtmView({ onToast }: { onToast: (msg: string) => void }) {
           confirmed={confirmed}
           onToggleConfirm={() => setConfirmed((c) => !c)}
           onSend={doSend}
+          onStop={stopSend}
           onClose={() => !sending && setReviewOpen(false)}
         />
       )}
@@ -900,6 +991,7 @@ function ReviewModal({
   confirmed,
   onToggleConfirm,
   onSend,
+  onStop,
   onClose,
 }: {
   selGroups: GtmGroup[];
@@ -913,6 +1005,7 @@ function ReviewModal({
   confirmed: boolean;
   onToggleConfirm: () => void;
   onSend: () => void;
+  onStop: () => void;
   onClose: () => void;
 }) {
   const count = selGroups.length;
@@ -977,6 +1070,11 @@ function ReviewModal({
             </div>
             <div className="gtm-progress-track">
               <div className="gtm-progress-bar" style={{ width: `${pct}%` }} />
+            </div>
+            <div className="gtm-modal-actions">
+              <button className="gtm-btn gtm-btn-ghost gtm-btn-danger" onClick={onStop}>
+                Stop
+              </button>
             </div>
           </div>
         ) : (
