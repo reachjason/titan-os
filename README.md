@@ -5,7 +5,7 @@ with `/commands` anywhere in the line; it lands in a chronological feed. View as
 list, grouped by tag, or as a kanban board. Sign in with GitHub — your data is
 private to your account and synced via Convex.
 
-**Live:** https://www.usetitan.xyz
+**Live:** https://www.trytitan.xyz
 
 ---
 
@@ -69,7 +69,7 @@ git checkout -b my-change
 # ...edit...
 npm run build        # optional local check: tsc -b && vite build
 git commit -am "my change" && git push
-# open a PR, or push to main → GitHub Actions deploys to https://www.usetitan.xyz
+# open a PR, or push to main → GitHub Actions deploys to https://www.trytitan.xyz
 ```
 
 **Any push to `main` - by anyone - deploys automatically** (Convex backend +
@@ -124,7 +124,7 @@ to any MCP client that supports remote Streamable HTTP servers.
 Production endpoint:
 
 ```text
-https://www.usetitan.xyz/mcp
+https://www.trytitan.xyz/mcp
 ```
 
 Authentication:
@@ -143,7 +143,7 @@ Generic remote MCP config shape:
   "mcpServers": {
     "titan-os": {
       "type": "http",
-      "url": "https://www.usetitan.xyz/mcp",
+      "url": "https://www.trytitan.xyz/mcp",
       "headers": {
         "Authorization": "Bearer <Titan MCP key>"
       }
@@ -158,7 +158,7 @@ the header in a separate UI field. Use the same URL and bearer header either way
 Smoke test a key:
 
 ```bash
-curl https://www.usetitan.xyz/mcp \
+curl https://www.trytitan.xyz/mcp \
   -H "Authorization: Bearer <Titan MCP key>" \
   -H "Content-Type: application/json" \
   --data '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}'

@@ -1,6 +1,6 @@
 # Titan OS - project guide for AI agents & contributors
 
-**Live:** https://www.usetitan.xyz - deploys on every push to `main`.
+**Live:** https://www.trytitan.xyz - deploys on every push to `main`.
 
 ## Environment model
 

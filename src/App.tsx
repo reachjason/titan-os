@@ -14,6 +14,7 @@ import { NowNotch } from "./components/NowNotch";
 import { NowModal } from "./components/NowModal";
 import { Board } from "./components/Board";
 import { ReviewView } from "./components/ReviewView";
+import { GtmView } from "./components/GtmView";
 import { TagChip } from "./components/TagChip";
 import { Spotlight } from "./components/Spotlight";
 import { AccountMenu } from "./components/AccountMenu";
@@ -448,6 +449,13 @@ function Workspace() {
         return;
       }
 
+      if (k === "4") {
+        e.preventDefault();
+        setView("gtm");
+        setFilterOpen(false);
+        return;
+      }
+
       // Review view: e / c expand / collapse every day group.
       if (view === "review" && (k === "e" || k === "c")) {
         e.preventDefault();
@@ -589,9 +597,11 @@ function Workspace() {
   };
   const feedAreaClass = `feed-area${feedScrolling ? " feed-area-scrolling" : ""}`;
 
+  const isGtm = view === "gtm";
+
   return (
     <ThemeContext.Provider value={theme}>
-      <div className="app">
+      <div className={`app${isGtm ? " app-gtm" : ""}`}>
         <header className="top-bar">
           <span className="wordmark">
             titan<span className="wordmark-slash">/</span>os
@@ -616,6 +626,12 @@ function Workspace() {
               onClick={() => setView("review")}
             >
               review
+            </button>
+            <button
+              className={`view-link${view === "gtm" ? " view-on" : ""}`}
+              onClick={() => setView("gtm")}
+            >
+              gtm
             </button>
           </div>
 
@@ -648,6 +664,7 @@ function Workspace() {
             </div>
           )}
 
+          {!isGtm && (
           <div className="filter-wrap">
             <button
               className={`filter-trigger${filtering ? " filter-on" : ""}`}
@@ -691,18 +708,21 @@ function Workspace() {
               />
             )}
           </div>
+          )}
 
           <div className="bar-spacer" />
 
-          <button
-            className="search-trigger"
-            onClick={() => setSpotOpen(true)}
-            title="Search (⇧F)"
-            aria-label="Search"
-          >
-            <span className="search-glyph">⌕</span>
-            <span className="search-kbd">⇧F</span>
-          </button>
+          {!isGtm && (
+            <button
+              className="search-trigger"
+              onClick={() => setSpotOpen(true)}
+              title="Search (⇧F)"
+              aria-label="Search"
+            >
+              <span className="search-glyph">⌕</span>
+              <span className="search-kbd">⇧F</span>
+            </button>
+          )}
 
           <div className="bar-utils">
             <button
@@ -756,7 +776,7 @@ function Workspace() {
           />
         </header>
 
-        {filtering && view !== "review" && (
+        {filtering && view !== "review" && !isGtm && (
           <div className="filter-bar">
             <span className="filter-label">Filtering</span>
             {filter.query.trim() && (
@@ -798,7 +818,7 @@ function Workspace() {
           </div>
         )}
 
-        {nowEntry && (
+        {nowEntry && !isGtm && (
           <NowNotch
             entry={nowEntry}
             onOpen={() => setNowOpen(true)}
@@ -806,7 +826,11 @@ function Workspace() {
           />
         )}
 
-        {view === "board" ? (
+        {view === "gtm" ? (
+          <main className="gtm-area">
+            <GtmView onToast={flash} />
+          </main>
+        ) : view === "board" ? (
           <main className={feedAreaClass} onScroll={handleFeedScroll}>
             <Board
               entries={filtered}
@@ -886,15 +910,17 @@ function Workspace() {
           </>
         )}
 
-        <footer className="bar-area">
-          <TerminalBar
-            ref={barRef}
-            onSubmit={logEntry}
-            knownTags={knownTags}
-            people={people}
-            history={history}
-          />
-        </footer>
+        {!isGtm && (
+          <footer className="bar-area">
+            <TerminalBar
+              ref={barRef}
+              onSubmit={logEntry}
+              knownTags={knownTags}
+              people={people}
+              history={history}
+            />
+          </footer>
+        )}
 
         {spotOpen && (
           <Spotlight

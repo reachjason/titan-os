@@ -84,6 +84,15 @@ export const config = {
     confirmOnDelete: true,
     /** Auto-scroll the feed to the newest entry. */
     autoScroll: true,
+    /** GTM (Telegram broadcast) section copy. */
+    gtm: {
+      linkTitle: "Link your Telegram",
+      setPinTitle: "Set a broadcast PIN",
+      unlockTitle: "Enter your PIN",
+      unlockedLabel: "Unlocked",
+      lockNowLabel: "lock now",
+      newGroupsLabel: "new groups",
+    },
   },
 
   /** Keyboard shortcuts (KeyboardEvent.key values; search uses Shift). */
@@ -124,6 +133,22 @@ export const config = {
     searchRecentKey: "titan-os.search.recent.v1",
     /** Remembers preferences (timestamps, task tags). */
     prefsKey: "titan-os.prefs.v1",
+    /**
+     * GTM session vault — the Telegram session string is encrypted at rest here
+     * (IndexedDB), under a key derived from the broadcast PIN. Nothing sensitive
+     * is ever in localStorage; this block only holds the store coordinates and
+     * tuning, not secrets.
+     */
+    vault: {
+      dbName: "titan-os.vault",
+      storeName: "session",
+      recordKey: "current",
+      version: 1,
+      /** Unlock window, refreshed on each send. */
+      ttlMs: 30 * 60 * 1000,
+      /** PBKDF2 work factor for deriving the AES key from the PIN. */
+      pbkdf2Iterations: 600_000,
+    },
   },
 
   /**
@@ -136,13 +161,13 @@ export const config = {
       bgRaised: "#ffffff",
       bgSunk: "#eae3d6",
       ink: "#2a2521",
-      inkSoft: "#6b6358",
-      inkFaint: "#a39a8c",
-      clay: "#c8674a",
-      clayDeep: "#a8523a",
-      line: "#e2dacd",
+      inkSoft: "#5c554b",
+      inkFaint: "#857c6d",
+      clay: "#bd5f43",
+      clayDeep: "#9e4d36",
+      line: "#d8cfbe",
       mark: "#f1d9bf",
-      dot: "#c9bfae",
+      dot: "#b3a890",
       scrim: "rgba(40,30,20,.28)",
       shadow: "0 1px 2px rgba(40,30,20,.06), 0 12px 32px rgba(40,30,20,.10)",
       shadowStrong: "0 24px 60px rgba(40,30,20,.30)",

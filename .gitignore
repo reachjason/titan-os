@@ -5,6 +5,8 @@ dist-ssr
 .vercel
 .DS_Store
 .vite
+.claude/launch.json
+tsconfig.tsbuildinfo
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*

@@ -1,7 +1,7 @@
 export const MCP_PROTOCOL_VERSION = "2025-11-25";
 export const MCP_SERVER_NAME = "titan-os";
 export const MCP_SERVER_VERSION = "0.1.0";
-export const MCP_ENDPOINT = "https://www.usetitan.xyz/mcp";
+export const MCP_ENDPOINT = "https://www.trytitan.xyz/mcp";
 export const MCP_DEV_ENDPOINT = "https://abundant-jaguar-978.convex.site/mcp";
 export const DEFAULT_TASK_TAGS = ["do", "todo"];
 

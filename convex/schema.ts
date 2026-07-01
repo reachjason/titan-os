@@ -57,6 +57,30 @@ export default defineSchema({
     updatedAt: v.number(),
   }).index("by_user", ["userId"]),
 
+  // GTM (Telegram broadcast) — cached metadata for the groups a user is in,
+  // scoped to that user. This is NON-SENSITIVE display data (names, handles,
+  // member counts). The Telegram session itself is NEVER stored here — it lives
+  // only client-side, encrypted in IndexedDB. See the GTM integration plan.
+  gtmGroups: defineTable({
+    userId: v.id("users"),
+    /** Telegram group/channel id — stable per-user key for upserts. */
+    tgId: v.string(),
+    name: v.string(),
+    /** @handle, or "" for private groups without one. */
+    handle: v.string(),
+    members: v.number(),
+    /** Category slugs the user tagged this group with. */
+    cats: v.array(v.string()),
+    /** Surfaced with a "new" badge until the user dismisses it. */
+    isNew: v.boolean(),
+    /** Convex storage id of the group's profile photo, if downloaded. */
+    photoId: v.optional(v.id("_storage")),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_tg", ["userId", "tgId"]),
+
   mcpAuditEvents: defineTable({
     userId: v.id("users"),
     keyId: v.id("mcpKeys"),
