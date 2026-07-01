@@ -36,15 +36,65 @@ function toGroup(doc: GroupDoc): GtmGroup {
 export function useGtmGroups() {
   const docs = useQuery(api.gtmGroups.list);
   const upsertManyM = useMutation(api.gtmGroups.upsertMany);
-  const toggleCatM = useMutation(api.gtmGroups.toggleCat);
-  const setCatsM = useMutation(api.gtmGroups.setCats);
-  const bulkToggleCatM = useMutation(api.gtmGroups.bulkToggleCat);
-  const clearNewM = useMutation(api.gtmGroups.clearNew);
+  // Category writes apply optimistically to the local query store so the UI
+  // reflects the toggle instantly; Convex auto-rolls-back if the mutation fails.
+  const toggleCatM = useMutation(api.gtmGroups.toggleCat).withOptimisticUpdate(
+    (store, { id, cat }) => {
+      const cur = store.getQuery(api.gtmGroups.list);
+      if (!cur) return;
+      store.setQuery(
+        api.gtmGroups.list,
+        {},
+        cur.map((g) =>
+          g._id === id
+            ? { ...g, cats: g.cats.includes(cat) ? g.cats.filter((c) => c !== cat) : [...g.cats, cat] }
+            : g
+        )
+      );
+    }
+  );
+  const setCatsM = useMutation(api.gtmGroups.setCats).withOptimisticUpdate(
+    (store, { id, cats }) => {
+      const cur = store.getQuery(api.gtmGroups.list);
+      if (!cur) return;
+      store.setQuery(
+        api.gtmGroups.list,
+        {},
+        cur.map((g) => (g._id === id ? { ...g, cats } : g))
+      );
+    }
+  );
+  const bulkToggleCatM = useMutation(api.gtmGroups.bulkToggleCat).withOptimisticUpdate(
+    (store, { ids, cat }) => {
+      const cur = store.getQuery(api.gtmGroups.list);
+      if (!cur) return;
+      const idSet = new Set(ids as string[]);
+      const targets = cur.filter((g) => idSet.has(g._id));
+      // Match the server's tri-state: remove from all only if every target has it.
+      const allHave = targets.length > 0 && targets.every((g) => g.cats.includes(cat));
+      store.setQuery(
+        api.gtmGroups.list,
+        {},
+        cur.map((g) => {
+          if (!idSet.has(g._id)) return g;
+          if (allHave) return { ...g, cats: g.cats.filter((c) => c !== cat) };
+          return g.cats.includes(cat) ? g : { ...g, cats: [...g.cats, cat] };
+        })
+      );
+    }
+  );
+  const clearNewM = useMutation(api.gtmGroups.clearNew).withOptimisticUpdate((store) => {
+    const cur = store.getQuery(api.gtmGroups.list);
+    if (!cur) return;
+    store.setQuery(api.gtmGroups.list, {}, cur.map((g) => (g.isNew ? { ...g, isNew: false } : g)));
+  });
   const clearAllM = useMutation(api.gtmGroups.clearAll);
   const generateUploadUrlM = useMutation(api.gtmGroups.generateUploadUrl);
   const setPhotoM = useMutation(api.gtmGroups.setPhoto);
 
   const [syncing, setSyncing] = useState(false);
+  // Wall-clock of the last successful sync (per-device), for background refresh.
+  const [lastSyncAt, setLastSyncAt] = useState(0);
 
   // `undefined` while loading → empty; `synced` is "has at least one group".
   const groups = useMemo(() => (docs ?? []).map(toGroup), [docs]);
@@ -74,8 +124,13 @@ export function useGtmGroups() {
   );
 
   const sync = useCallback(
-    async (onToast?: (msg: string) => void) => {
+    async (onToast?: (msg: string) => void, opts?: { background?: boolean }) => {
       if (syncing) return;
+      // A background refresh reports only meaningful changes (new/left groups),
+      // staying silent on a no-op so it never nags during idle auto-syncs.
+      const notify = (msg: string, meaningful: boolean) => {
+        if (!opts?.background || meaningful) onToast?.(msg);
+      };
       setSyncing(true);
       // tgIds that already have a photo cached — skip re-downloading those.
       const havePhoto = new Set((docs ?? []).filter((g) => g.photoUrl).map((g) => g.tgId));
@@ -97,12 +152,21 @@ export function useGtmGroups() {
             await client.disconnect();
           }
         });
-        const { newTgIds } = await upsertManyM({ groups: fetched.map(toUpsert) });
-        if (newTgIds.length === 0) onToast?.(`Synced ${fetched.length} groups · no new ones`);
-        else
-          onToast?.(
-            `Synced ${fetched.length} · ${newTgIds.length} new group${newTgIds.length === 1 ? "" : "s"}`
-          );
+        // Full sync: reconcile the cache (fetched is the complete dialog list),
+        // so groups the user has left are pruned server-side.
+        const { newTgIds, pruned } = await upsertManyM({
+          groups: fetched.map(toUpsert),
+          full: true,
+        });
+        setLastSyncAt(Date.now());
+        const parts: string[] = [];
+        if (newTgIds.length) parts.push(`${newTgIds.length} new`);
+        if (pruned) parts.push(`${pruned} left`);
+        const changed = newTgIds.length > 0 || pruned > 0;
+        notify(
+          changed ? `Synced ${fetched.length} · ${parts.join(" · ")}` : `Synced ${fetched.length} groups · up to date`,
+          changed
+        );
         // Upload photos after the groups exist (setPhoto looks them up by tgId).
         for (const p of photos) {
           try {
@@ -112,11 +176,12 @@ export function useGtmGroups() {
           }
         }
       } catch (e) {
-        onToast?.(
-          (e as Error)?.message === "LOCKED"
-            ? "Unlock first to sync"
-            : "Sync failed — " + ((e as Error)?.message ?? "try again")
-        );
+        const locked = (e as Error)?.message === "LOCKED";
+        // A background sync fails silently (locked/offline is expected); only a
+        // user-initiated sync surfaces the error.
+        if (!opts?.background) {
+          onToast?.(locked ? "Unlock first to sync" : "Sync failed — " + ((e as Error)?.message ?? "try again"));
+        }
       } finally {
         setSyncing(false);
       }
@@ -147,6 +212,7 @@ export function useGtmGroups() {
     loaded,
     synced,
     syncing,
+    lastSyncAt,
     sync,
     toggleGroupCat,
     setGroupCats,

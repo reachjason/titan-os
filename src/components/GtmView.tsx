@@ -10,9 +10,9 @@ import { runBroadcast, sendTestToSelf, type BroadcastTarget } from "../lib/broad
  * GTM · Go-to-Market broadcast tool. Connect Telegram, sync the groups you're
  * in, tag them into categories, and broadcast one message to every group in a
  * category. Group metadata is cached in Convex (useGtmGroups); the connect →
- * unlock lifecycle + per-device UI prefs live in useGtm. Broadcast sending is
- * still simulated until Phase 3 wires real Telegram. Mirrors the design
- * prototype's two-pane + persistent-compose-dock layout on Titan's theme tokens.
+ * unlock lifecycle + per-device UI prefs live in useGtm. QR login, the encrypted
+ * session vault, and broadcasting all hit real Telegram via GramJS. Two-pane +
+ * persistent-compose-dock layout on Titan's theme tokens.
  */
 
 type ActiveCat = "all" | "uncat" | string;
@@ -58,6 +58,28 @@ export function GtmView({ onToast }: { onToast: (msg: string) => void }) {
   };
 
   useEffect(() => () => window.clearInterval(sendTimer.current), []);
+
+  // Background sync: once the session is unlocked and groups are already synced,
+  // quietly refresh from Telegram — immediately if the cache is stale (>5 min),
+  // then on a 5-min interval while the view stays open and unlocked. Silent on a
+  // no-op (only new/left groups toast); pauses while a manual sync runs. Keeping
+  // the latest sync/state in a ref avoids re-arming the timer on every render.
+  const bgRef = useRef({ sync: gg.sync, syncing: gg.syncing, lastSyncAt: gg.lastSyncAt, onToast });
+  bgRef.current = { sync: gg.sync, syncing: gg.syncing, lastSyncAt: gg.lastSyncAt, onToast };
+  const canBgSync = gtm.unlocked && gg.synced;
+  useEffect(() => {
+    if (!canBgSync) return;
+    const STALE_MS = 5 * 60 * 1000;
+    const tick = () => {
+      const b = bgRef.current;
+      if (b.syncing) return;
+      if (Date.now() - b.lastSyncAt < STALE_MS) return;
+      void b.sync(b.onToast, { background: true });
+    };
+    tick(); // refresh on open if stale
+    const id = window.setInterval(tick, STALE_MS);
+    return () => window.clearInterval(id);
+  }, [canBgSync]);
 
   // ---- derived data ----
   // Cesto-only toggle: when on, restrict to groups whose name/handle contains
@@ -442,7 +464,30 @@ export function GtmView({ onToast }: { onToast: (msg: string) => void }) {
     ) : null;
 
   // =========================================================================
-  // EMPTY (unlocked, not synced)
+  // LOADING — Convex group query in flight (avoid the empty-state flash)
+  // =========================================================================
+  if (!gg.loaded) {
+    return (
+      <div className="gtm-root">
+        {renderConnbar()}
+        <div className="gtm-skel-pane" aria-busy="true" aria-label="Loading groups">
+          {Array.from({ length: 7 }).map((_, i) => (
+            <div className="gtm-skel-row" key={i}>
+              <span className="gtm-skel gtm-skel-avatar" />
+              <div className="gtm-skel-meta">
+                <span className="gtm-skel gtm-skel-line" style={{ width: `${52 + ((i * 13) % 34)}%` }} />
+                <span className="gtm-skel gtm-skel-line gtm-skel-line-sm" style={{ width: `${28 + ((i * 17) % 26)}%` }} />
+              </div>
+              <span className="gtm-skel gtm-skel-chip" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // =========================================================================
+  // EMPTY (unlocked, loaded, not synced)
   // =========================================================================
   if (!gg.synced) {
     return (
@@ -1023,7 +1068,13 @@ function ReviewModal({
   onClose: () => void;
 }) {
   const count = selGroups.length;
-  const eta = count + "s";
+  // Human-paced sending: ~3–12s between each send (avg ~7.5s), no delay after
+  // the last one. Round to a friendly "~Nm" / "~Ns" so users don't think it hung.
+  const etaSeconds = Math.max(0, count - 1) * 7.5;
+  const eta =
+    etaSeconds >= 90
+      ? `~${Math.round(etaSeconds / 60)} min`
+      : `~${Math.max(1, Math.round(etaSeconds))}s`;
   const pct = sentTotal ? Math.round((sentCount / sentTotal) * 100) : 0;
   return (
     <div className="gtm-modal-scrim" onClick={onClose}>
@@ -1070,7 +1121,8 @@ function ReviewModal({
               : "○ No dry-run yet — close and hit “Test to myself” to preview delivery"}
           </div>
           <div className="gtm-note gtm-note-warn">
-            ⚠ Telegram rate limit ~1 msg/sec · estimated {eta} to send all
+            ⚠ Sent at a human pace (a few seconds apart) to avoid Telegram's spam
+            filter · estimated {eta} to send all
           </div>
         </div>
 

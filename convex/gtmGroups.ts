@@ -89,10 +89,16 @@ export const setPhoto = mutation({
 });
 
 /**
- * Upsert a synced batch of groups. Existing groups (matched by tgId) are
- * patched in place — preserving the user's category tags; new ones are inserted
- * flagged isNew. Returns the tgIds that were newly inserted, which drives the
- * "Found N new groups" badge.
+ * Upsert a synced batch of groups, reconciling the cache to match Telegram.
+ * Existing groups (matched by tgId) are patched in place — preserving the
+ * user's category tags; new ones are inserted flagged isNew; groups the user
+ * has since left (present in the cache but absent from this sync) are removed
+ * along with their cached photo blobs. Returns the tgIds newly inserted (drives
+ * the "Found N new groups" badge) and how many stale groups were pruned.
+ *
+ * `full` distinguishes a complete dialog sync (safe to prune) from a partial
+ * update; only a full sync removes groups missing from the batch, so a filtered
+ * or interrupted fetch never wipes the cache.
  */
 export const upsertMany = mutation({
   args: {
@@ -106,8 +112,10 @@ export const upsertMany = mutation({
         cats: v.optional(v.array(v.string())),
       })
     ),
+    /** True when `groups` is the complete dialog list (enables pruning). */
+    full: v.optional(v.boolean()),
   },
-  handler: async (ctx, { groups }) => {
+  handler: async (ctx, { groups, full }) => {
     const userId = await requireUser(ctx);
     const now = Date.now();
     const newTgIds: string[] = [];
@@ -136,7 +144,22 @@ export const upsertMany = mutation({
         newTgIds.push(g.tgId);
       }
     }
-    return { newTgIds };
+    // On a full sync, prune groups the user has left (and free their photos).
+    let pruned = 0;
+    if (full) {
+      const incoming = new Set(groups.map((g) => g.tgId));
+      const mine = await ctx.db
+        .query("gtmGroups")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .take(500);
+      for (const g of mine) {
+        if (incoming.has(g.tgId)) continue;
+        if (g.photoId) await ctx.storage.delete(g.photoId);
+        await ctx.db.delete(g._id);
+        pruned++;
+      }
+    }
+    return { newTgIds, pruned };
   },
 });
 
@@ -212,6 +235,9 @@ export const clearAll = mutation({
       .query("gtmGroups")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .take(500);
-    for (const g of mine) await ctx.db.delete(g._id);
+    for (const g of mine) {
+      if (g.photoId) await ctx.storage.delete(g.photoId); // free the cached photo blob
+      await ctx.db.delete(g._id);
+    }
   },
 });

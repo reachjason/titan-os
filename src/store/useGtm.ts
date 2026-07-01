@@ -14,9 +14,8 @@ import { qrLogin, type QrLoginHandlers } from "../lib/telegramClient";
  * The unlock lasts 30 minutes (refreshed on every send) and is held in memory
  * only — a reload re-locks.
  *
- * Until Phase 3 wires real Telegram, the QR step is simulated and a placeholder
- * session string is what gets encrypted — but the PIN, the AES-GCM vault, and
- * the in-memory unlock are all real.
+ * The QR step runs a real Telegram MTProto login (via GramJS); the session
+ * string it returns is what gets encrypted into the AES-GCM vault under the PIN.
  */
 
 /** Connection lifecycle. `loggedOut` → (scan QR + set PIN) → `locked` → (enter PIN) → `unlocked`. */
