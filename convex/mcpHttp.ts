@@ -46,6 +46,8 @@ const JSON_HEADERS = {
 };
 
 const ALLOWED_ORIGINS = new Set([
+  "https://www.trytitan.xyz",
+  "https://trytitan.xyz",
   "https://www.usetitan.xyz",
   "https://usetitan.xyz",
   "https://robust-grasshopper-674.convex.site",

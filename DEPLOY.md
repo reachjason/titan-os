@@ -1,6 +1,6 @@
 # Titan OS - Deployment
 
-**Live:** https://www.usetitan.xyz — deployed on every push to `main` via GitHub
+**Live:** https://www.trytitan.xyz — deployed on every push to `main` via GitHub
 Actions (`.github/workflows/deploy.yml`). Fully working end-to-end: custom domain →
 Vercel frontend → Convex backend → GitHub auth → per-user data.
 
@@ -8,7 +8,7 @@ This project now uses separate Convex deployments for local development and
 production. Entries live in Convex, scoped per GitHub user; theme/prefs/sort+view
 stay in `localStorage` (per-device).
 
-- Production site: `https://www.usetitan.xyz`
+- Production site: `https://www.trytitan.xyz`
 - Convex prod Cloud URL: `https://robust-grasshopper-674.convex.cloud`
 - Convex prod Site URL (OAuth callbacks): `https://robust-grasshopper-674.convex.site`
 - Convex dev Cloud URL: `https://abundant-jaguar-978.convex.cloud`
@@ -90,7 +90,7 @@ for a personal dev deployment.
 - Prod Convex deployment created; schema + functions + auth tables deployed.
 - Prod auth keys generated (`JWT_PRIVATE_KEY`, `JWKS`).
 - Prod Convex env set: `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`,
-  `SITE_URL=https://www.usetitan.xyz`.
+  `SITE_URL=https://www.trytitan.xyz`.
 - GitHub OAuth app callback → `https://robust-grasshopper-674.convex.site/api/auth/callback/github`.
 - GitHub login → create / persist / delete entry all verified on prod.
 - Dev Convex deployment selected locally: `abundant-jaguar-978`.
@@ -99,7 +99,7 @@ for a personal dev deployment.
 - Dev GitHub OAuth callback reaches GitHub login:
   `https://abundant-jaguar-978.convex.site/api/auth/callback/github`.
 - CI/CD: push to `main` → Convex deploy + Vercel build/deploy (5 GitHub secrets set).
-- Custom domain `www.usetitan.xyz` attached to the Vercel project.
+- Custom domain `www.trytitan.xyz` attached to the Vercel project.
 - `/mcp` rewrites from Vercel to the prod Convex HTTP action at
   `https://robust-grasshopper-674.convex.site/mcp`.
 
@@ -107,14 +107,14 @@ for a personal dev deployment.
 
 If you ever need to recreate the OAuth app:
 - **OAuth App** → github.com → Settings → Developer settings → **OAuth Apps**:
-  - Homepage URL: `https://www.usetitan.xyz`
+  - Homepage URL: `https://www.trytitan.xyz`
   - **Authorization callback URL:**
     `https://robust-grasshopper-674.convex.site/api/auth/callback/github`
 - Set the creds on prod Convex:
   ```bash
   npx convex env set AUTH_GITHUB_ID <client-id>
   npx convex env set AUTH_GITHUB_SECRET <client-secret>
-  npx convex env set SITE_URL https://www.usetitan.xyz
+  npx convex env set SITE_URL https://www.trytitan.xyz
   ```
 
 To sanity-check what's set:
