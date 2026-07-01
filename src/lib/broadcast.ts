@@ -1,5 +1,5 @@
 import { withSession } from "./sessionLock";
-import { connectClient } from "./telegramClient";
+import { connectClient, resolveTargets } from "./telegramClient";
 
 /**
  * broadcast — the guarded post-only send loop.
@@ -83,12 +83,32 @@ export async function runBroadcast(
     const client = await connectClient(sessionString);
     let sent = 0;
     try {
+      // Prime the entity cache: a fresh client can't address a group by bare id
+      // (no access_hash) until the dialog list is loaded. Resolve all targets to
+      // sendable entities up front — this is why sending failed silently before.
+      const entities = await resolveTargets(
+        client,
+        targets.map((t) => t.tgId)
+      );
       for (let i = 0; i < targets.length; i++) {
         if (signal.aborted) return { sent, aborted: true, reason: "user_stopped" as const };
         const t = targets[i];
+        const entity = entities.get(t.tgId);
+        if (!entity) {
+          // tgId isn't in the current dialog list → account left/removed since
+          // the last sync. Skip explicitly rather than fail the whole batch. No
+          // pacing delay: nothing was sent, so there's no rate-limit exposure.
+          onProgress({
+            index: i,
+            total: targets.length,
+            target: t,
+            status: "skipped",
+            error: "not a member (re-sync to refresh)",
+          });
+          continue;
+        }
         try {
-          const entity = await client.getEntity(t.tgId);
-          await client.sendMessage(entity, { message });
+          await client.sendMessage(entity as Parameters<typeof client.sendMessage>[0], { message });
           sent++;
           onProgress({ index: i, total: targets.length, target: t, status: "sent" });
         } catch (e) {

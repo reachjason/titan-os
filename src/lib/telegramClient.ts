@@ -139,6 +139,35 @@ export function toUpsert(g: FetchedGroup): Omit<GtmGroup, "id" | "isNew" | "cats
 }
 
 /**
+ * Resolve a set of stored tgIds to sendable Telegram entities.
+ *
+ * A stored tgId is just the bare numeric peer id (`entity.id.toString()`).
+ * Telegram cannot address a channel/group by bare id alone — it needs the
+ * peer's `access_hash`, which lives only in the dialog list. On a freshly
+ * connected client (as broadcast uses) the entity cache is empty, so
+ * `getEntity(tgId)` throws "Could not find the input entity". We therefore pull
+ * the dialog list once (which carries every access_hash) and build a
+ * tgId → entity map. Callers send to the mapped entity; any tgId missing from
+ * the map is a group the account is no longer in (left / kicked), reported as
+ * an explicit skip rather than a silent failure.
+ */
+export async function resolveTargets(
+  client: TelegramClient,
+  tgIds: string[]
+): Promise<Map<string, unknown>> {
+  const want = new Set(tgIds);
+  const map = new Map<string, unknown>();
+  const dialogs = await client.getDialogs({ limit: 500 });
+  for (const d of dialogs) {
+    const entity = d.entity as { id?: { toString(): string } } | undefined;
+    if (!entity?.id) continue;
+    const id = entity.id.toString();
+    if (want.has(id)) map.set(id, d.entity);
+  }
+  return map;
+}
+
+/**
  * Download a group's profile photo as a PNG/JPEG Blob, or null if it has none.
  * Resolves the entity by tgId on the given (already-connected) client.
  */

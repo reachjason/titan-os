@@ -3540,6 +3540,10 @@ kbd {
   gap: 12px;
   padding: 16px 22px 12px;
   flex-shrink: 0;
+  /* Reserve the height of the tallest state (bulk-select controls present) so
+     selecting/deselecting a group never reflows the list below it. */
+  min-height: 62px;
+  box-sizing: border-box;
 }
 .gtm-list-title {
   display: flex;
@@ -3550,6 +3554,7 @@ kbd {
   display: flex;
   align-items: center;
   gap: 13px;
+  min-height: 34px; /* matches the "＋ Categorize" button so the row height is stable */
 }
 .gtm-bulk-wrap {
   position: relative;
@@ -3562,6 +3567,36 @@ kbd {
   flex: 1;
   overflow: auto;
   padding: 0 18px 18px;
+}
+/* Subtle, themed scrollbars for the GTM scroll areas — replaces the default
+   bright native track/thumb with a thin rounded thumb on theme tokens. */
+.gtm-list-rows,
+.gtm-rail-list,
+.gtm-recipients {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+.gtm-list-rows::-webkit-scrollbar,
+.gtm-rail-list::-webkit-scrollbar,
+.gtm-recipients::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.gtm-list-rows::-webkit-scrollbar-thumb,
+.gtm-rail-list::-webkit-scrollbar-thumb,
+.gtm-recipients::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 999px;
+}
+.gtm-list-rows::-webkit-scrollbar-thumb:hover,
+.gtm-rail-list::-webkit-scrollbar-thumb:hover,
+.gtm-recipients::-webkit-scrollbar-thumb:hover {
+  background: var(--dot);
+}
+.gtm-list-rows::-webkit-scrollbar-track,
+.gtm-rail-list::-webkit-scrollbar-track,
+.gtm-recipients::-webkit-scrollbar-track {
+  background: transparent;
 }
 .gtm-grow {
   display: flex;
