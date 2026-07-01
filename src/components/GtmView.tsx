@@ -168,12 +168,14 @@ export function GtmView({ onToast }: { onToast: (msg: string) => void }) {
     setSentTotal(total);
     const ctrl = new AbortController();
     abortRef.current = ctrl;
+    let skipped = 0;
     try {
       const result = await runBroadcast(
         targets,
         message,
         (p) => {
           if (p.status === "sent") setSentCount((n) => n + 1);
+          else if (p.status === "skipped") skipped++;
         },
         ctrl.signal
       );
@@ -181,8 +183,16 @@ export function GtmView({ onToast }: { onToast: (msg: string) => void }) {
         onToast(`Stopped: Telegram flagged the account (PEER_FLOOD) after ${result.sent}. Wait / contact @SpamBot.`);
       } else if (result.aborted) {
         onToast(`Stopped after ${result.sent} of ${total}`);
+      } else if (result.sent === 0) {
+        // Nothing delivered — never report a hollow "sent to 0". Say why.
+        onToast(
+          skipped > 0
+            ? `Sent to none — all ${skipped} skipped (re-sync groups, then retry)`
+            : "Sent to none — nothing was delivered"
+        );
       } else {
-        onToast(`Broadcast sent to ${result.sent} group${result.sent === 1 ? "" : "s"}`);
+        const tail = skipped > 0 ? ` · ${skipped} skipped` : "";
+        onToast(`Broadcast sent to ${result.sent} group${result.sent === 1 ? "" : "s"}${tail}`);
         setReviewOpen(false);
         setSelected([]);
         setMessage("");
@@ -411,7 +421,8 @@ export function GtmView({ onToast }: { onToast: (msg: string) => void }) {
     );
   }
 
-  // Connbar with the live unlock pill, shared by the empty and main views.
+  // Connbar shared by the empty and main views. Auto-locks when idle (no manual
+  // pill); the Cesto-only toggle sits on the right.
   const newGroupCount = groups.filter((g) => g.isNew).length;
   const dismissNewGroups = () => {
     setNewGroupsDismissed(true);
@@ -423,25 +434,19 @@ export function GtmView({ onToast }: { onToast: (msg: string) => void }) {
         <span className="gtm-dot gtm-dot-green" />
         Connected as <strong className="gtm-handle">{gtm.handle}</strong>
       </span>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={state.cestoOnly}
-        className={`gtm-toggle${state.cestoOnly ? " gtm-toggle-on" : ""}`}
-        onClick={() => gtm.setField("cestoOnly", !state.cestoOnly)}
-        title="Show only groups matching “cesto”"
-      >
-        <span className="gtm-toggle-track">
-          <span className="gtm-toggle-thumb" />
-        </span>
-        Cesto only
-      </button>
       <span className="gtm-connbar-right">
-        <span className="gtm-ttl-pill" title="Unlocked for this session — re-locks automatically when idle">
-          <span className="gtm-ttl-lock">🔓</span> Unlocked
-        </span>
-        <button className="gtm-textbtn" onClick={gtm.lockNow}>
-          lock now
+        <button
+          type="button"
+          role="switch"
+          aria-checked={state.cestoOnly}
+          className={`gtm-toggle${state.cestoOnly ? " gtm-toggle-on" : ""}`}
+          onClick={() => gtm.setField("cestoOnly", !state.cestoOnly)}
+          title="Show only groups matching “cesto”"
+        >
+          <span className="gtm-toggle-track">
+            <span className="gtm-toggle-thumb" />
+          </span>
+          Cesto only
         </button>
       </span>
     </div>

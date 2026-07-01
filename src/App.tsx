@@ -725,15 +725,7 @@ function Workspace() {
           )}
 
           <div className="bar-utils">
-            <button
-              className="util-link theme-toggle"
-              onClick={toggle}
-              title="Toggle theme"
-              aria-label="Toggle theme"
-            >
-              <span className={`theme-mark theme-mark-${theme}`} />
-              theme
-            </button>
+            {/* Theme lives in Settings now (Settings → Appearance). */}
             <button className="util-link" onClick={() => setSettingsOpen(true)}>
               settings
             </button>
