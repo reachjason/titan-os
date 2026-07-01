@@ -238,6 +238,11 @@ export function useGtm() {
     [normalizeCat]
   );
 
+  /** Remove a category from the rail order (group tags in Convex are untouched). */
+  const removeCat = useCallback((cat: string) => {
+    setState((s) => ({ ...s, catOrder: s.catOrder.filter((c) => c !== cat) }));
+  }, []);
+
   const unlocked = state.phase === "unlocked" && lockUnlocked;
 
   /** Remaining unlock time as "mm:ss" (clamped at 0), for the TTL pill. */
@@ -261,6 +266,7 @@ export function useGtm() {
     reset,
     normalizeCat,
     registerCat,
+    removeCat,
     ttlLabel,
   };
 }

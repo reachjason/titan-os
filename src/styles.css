@@ -1701,6 +1701,127 @@ button.mention:hover {
   max-width: 460px;
   padding: 24px;
 }
+
+/* Two-pane settings: left section nav + right content pane. */
+.modal-split {
+  max-width: 680px;
+  width: 92vw;
+  height: 560px;
+  max-height: 85vh;
+  padding: 0;
+  display: flex;
+  overflow: hidden;
+}
+.set-nav {
+  flex-shrink: 0;
+  width: 172px;
+  border-right: 1px solid var(--line);
+  background: var(--bg-sunk);
+  padding: 20px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.set-nav-title {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--ink);
+  padding: 0 10px 14px;
+}
+.set-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: none;
+  color: var(--ink-soft);
+  font-family: var(--font-body);
+  font-size: 13px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.set-nav-item:hover {
+  background: var(--bg-raised);
+  color: var(--ink);
+}
+.set-nav-on,
+.set-nav-on:hover {
+  background: var(--bg-raised);
+  color: var(--ink);
+  font-weight: 600;
+}
+.set-nav-icon {
+  font-size: 13px;
+  width: 16px;
+  text-align: center;
+  opacity: 0.85;
+}
+.set-pane {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 20px 22px;
+}
+.set-pane .modal-head {
+  margin-bottom: 6px;
+}
+.set-pane-body {
+  flex: 1;
+  overflow-y: auto;
+  margin: 0 -6px;
+  padding: 0 6px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+.set-pane-body::-webkit-scrollbar {
+  width: 8px;
+}
+.set-pane-body::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 999px;
+}
+/* First row/block in a pane shouldn't carry the section top border. */
+.set-pane-body > :first-child.set-row,
+.set-pane-body > :first-child.set-block,
+.set-pane-body > * > :first-child.set-row,
+.set-pane-body > * > :first-child.set-block {
+  border-top: none;
+}
+.set-sub-block {
+  display: block;
+  margin-top: 8px;
+}
+.danger-btn:hover {
+  border-color: var(--danger, #c0563f);
+  color: var(--danger, #c0563f);
+}
+@media (max-width: 620px) {
+  .modal-split {
+    flex-direction: column;
+    height: 85vh;
+  }
+  .set-nav {
+    width: 100%;
+    flex-direction: row;
+    overflow-x: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--line);
+    padding: 10px 12px;
+    gap: 6px;
+  }
+  .set-nav-title {
+    display: none;
+  }
+  .set-nav-item {
+    white-space: nowrap;
+  }
+}
 .modal-head {
   display: flex;
   align-items: center;
