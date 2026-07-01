@@ -51,6 +51,14 @@ jobs:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
           VITE_CONVEX_URL: ${{ secrets.VITE_CONVEX_URL }}
+          # Telegram app identity for the GTM broadcast feature. Vite inlines
+          # these VITE_ vars at build time, and the build runs here (not on
+          # Vercel), so they must be present in this shell — a Vercel-dashboard
+          # env var alone would not reach this prebuilt build. Non-secret app
+          # identity (ships in the client bundle), but kept as repo secrets for
+          # parity with the other build vars.
+          VITE_TG_API_ID: ${{ secrets.VITE_TG_API_ID }}
+          VITE_TG_API_HASH: ${{ secrets.VITE_TG_API_HASH }}
         run: vercel build --prod --token="$VERCEL_TOKEN"
 
       - name: Deploy to Vercel (production)
